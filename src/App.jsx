@@ -230,15 +230,19 @@ function AdOverlay({ onComplete }) {
 function Inp({ label, value, onChange, placeholder, maxLen }) {
   return (
     <div style={{ flex: 1 }}>
-      <TextField
-        variant="line"
-        label={label}
-        labelOption="sustain"
+      <div style={{ fontSize: 13, color: C.gray, marginBottom: 8 }}>{label}</div>
+      <input
         type="number"
         inputMode="numeric"
         value={value}
         onChange={(e) => onChange(e.target.value.slice(0, maxLen))}
         placeholder={placeholder}
+        style={{
+          width: "100%", padding: "14px 16px", borderRadius: 12,
+          border: "1px solid #E5E8EB", fontSize: 16, fontWeight: 600,
+          outline: "none", background: C.lightGray, color: C.dark,
+          boxSizing: "border-box", fontFamily: "inherit",
+        }}
       />
     </div>
   );
@@ -258,6 +262,7 @@ export default function App() {
   const [result, setResult] = useState(null);
   const [loadPct, setLoadPct] = useState(0);
   const [detailId, setDetailId] = useState(null);
+  const [timeDetailId, setTimeDetailId] = useState(null);
   const [registered, setRegistered] = useState(false);
   const [pointCount, setPointCount] = useState(0);
   const [showPaySheet, setShowPaySheet] = useState(null);
@@ -287,6 +292,7 @@ export default function App() {
   const handleTabChange = (id) => {
     setTab(id);
     if (id === "saju") setDetailId(null);
+    setTimeDetailId(null);
   };
 
   const canSubmit = year.length === 4 && month && day && gender;
@@ -730,18 +736,64 @@ export default function App() {
           </div>
           <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 16, marginBottom: 8 }}>
             {[
-              { time: "06~11시", icon: "☀️", label: "오전", bg: "#FFF8E1" },
-              { time: "11~15시", icon: "🌤️", label: "한낮", bg: "#FFF3E0" },
-              { time: "15~19시", icon: "🌅", label: "오후", bg: "#FCE4EC" },
-              { time: "19~23시", icon: "🌙", label: "저녁", bg: "#E8EAF6" },
-            ].map((t, i) => (
-              <Card key={i} style={{ minWidth: 100, padding: "16px 14px", textAlign: "center", background: t.bg, flexShrink: 0 }}>
-                <div style={{ fontSize: 32, marginBottom: 8 }}>{t.icon}</div>
-                <div style={{ fontSize: 13, fontWeight: 700 }}>{t.label}</div>
-                <div style={{ fontSize: 11, color: C.gray, marginTop: 4 }}>{t.time}</div>
-              </Card>
-            ))}
+              { id: "morning", time: "06~11시", icon: "☀️", label: "오전", bg: "#FFF8E1" },
+              { id: "noon",    time: "11~15시", icon: "🌤️", label: "한낮", bg: "#FFF3E0" },
+              { id: "afternoon", time: "15~19시", icon: "🌅", label: "오후", bg: "#FCE4EC" },
+              { id: "evening", time: "19~23시", icon: "🌙", label: "저녁", bg: "#E8EAF6" },
+            ].map((t) => {
+              const selected = timeDetailId === t.id;
+              return (
+                <Card key={t.id} onClick={() => setTimeDetailId(selected ? null : t.id)}
+                  style={{ minWidth: 100, padding: "16px 14px", textAlign: "center", background: t.bg, flexShrink: 0, cursor: "pointer", border: selected ? `2px solid ${C.purple}` : "2px solid transparent", transition: "border 0.2s" }}>
+                  <div style={{ fontSize: 32, marginBottom: 8 }}>{t.icon}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700 }}>{t.label}</div>
+                  <div style={{ fontSize: 11, color: C.gray, marginTop: 4 }}>{t.time}</div>
+                </Card>
+              );
+            })}
           </div>
+
+          {/* 시간대별 분석 내용 */}
+          {timeDetailId && (() => {
+            const timeTexts = {
+              morning: {
+                title: "오전 기운", icon: "☀️",
+                desc: `오전 시간대는 ${f.total > 75 ? "활기찬 기운으로 가득합니다. 중요한 미팅이나 결정을 이 시간대에 잡으면 좋습니다. 집중력이 최고조에 달해 업무 효율이 높아집니다." : "차분하게 하루를 시작하기 좋은 시간입니다. 무리하지 않고 계획을 세우며 준비하는 것이 현명합니다."}`,
+                tips: ["집중이 필요한 업무 처리", "중요한 연락·미팅", "가벼운 스트레칭"],
+              },
+              noon: {
+                title: "한낮 기운", icon: "🌤️",
+                desc: `한낮 시간대는 ${f.work > 75 ? "사회적 관계에서 긍정적인 에너지가 넘칩니다. 협업이나 네트워킹 활동에 최적입니다." : "에너지가 다소 분산되는 시간입니다. 과식을 피하고 가벼운 점심으로 오후를 준비하세요."}`,
+                tips: ["동료·지인과의 소통", "가벼운 점심 식사", "짧은 휴식으로 재충전"],
+              },
+              afternoon: {
+                title: "오후 기운", icon: "🌅",
+                desc: `오후 시간대는 ${f.wealth > 70 ? "재물 기운이 특히 강한 시간입니다. 금전 관련 결정이나 쇼핑, 투자 검토를 이 시간대에 하면 유리합니다." : "창의적인 활동에 좋은 기운이 흐릅니다. 새로운 아이디어를 내거나 취미 활동을 즐겨보세요."}`,
+                tips: ["재물 관련 처리 적기", "창의적 작업", "운동·산책"],
+              },
+              evening: {
+                title: "저녁 기운", icon: "🌙",
+                desc: `저녁 시간대는 ${f.love > 70 ? "감정의 기운이 풍부해 소중한 사람과의 교류에 최적입니다. 가족·연인과 따뜻한 시간을 보내세요." : "하루를 마무리하며 내면을 돌아보기 좋은 시간입니다. 과도한 야식이나 늦은 연락은 피하는 것이 좋습니다."}`,
+                tips: ["가족·연인과 대화", "가벼운 독서·명상", "내일 계획 정리"],
+              },
+            };
+            const tw = timeTexts[timeDetailId];
+            return (
+              <Card style={{ marginBottom: 16, border: `1px solid ${C.purple}20` }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                  <span style={{ fontSize: 24 }}>{tw.icon}</span>
+                  <div style={{ fontSize: 16, fontWeight: 700 }}>{tw.title}</div>
+                </div>
+                <p style={{ fontSize: 14, color: "#4E5968", lineHeight: 1.8, margin: "0 0 16px" }}>{tw.desc}</p>
+                <div style={{ background: C.lightGray, borderRadius: 12, padding: "12px 16px" }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8, color: C.purple }}>💡 이 시간대 추천</div>
+                  {tw.tips.map((tip, i) => (
+                    <div key={i} style={{ fontSize: 13, color: "#4E5968", marginBottom: i < tw.tips.length - 1 ? 4 : 0 }}>· {tip}</div>
+                  ))}
+                </div>
+              </Card>
+            );
+          })()}
 
           <div style={{ marginTop: 8, marginBottom: 4 }}>
             <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 4 }}>분야별 오늘 운세</div>
@@ -754,7 +806,7 @@ export default function App() {
               { id: "health", emoji: "💪", title: "건강운" },
               { id: "work", emoji: "📈", title: "직장운" },
             ].map((c) => (
-              <Card key={c.id} onClick={() => setDetailId(c.id)} style={{ cursor: "pointer", padding: "20px 16px" }}>
+              <Card key={c.id} onClick={() => setDetailId(c.id)} style={{ cursor: "pointer", padding: "20px 16px", textAlign: "center" }}>
                 <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>{c.title}</div>
                 <div style={{ fontSize: 36 }}>{c.emoji}</div>
               </Card>
@@ -765,7 +817,7 @@ export default function App() {
           <div style={{ fontSize: 13, color: C.gray, marginBottom: 16 }}>오늘 돈의 흐름을 가볍게 확인해보세요.</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
             {[{ id: "luck", emoji: "🎰", title: "로또운" }, { id: "money", emoji: "📊", title: "주식운" }].map((c) => (
-              <Card key={c.id} onClick={() => setDetailId(c.id)} style={{ cursor: "pointer", padding: "20px 16px" }}>
+              <Card key={c.id} onClick={() => setDetailId(c.id)} style={{ cursor: "pointer", padding: "20px 16px", textAlign: "center" }}>
                 <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>{c.title}</div>
                 <div style={{ fontSize: 36 }}>{c.emoji}</div>
               </Card>
@@ -776,7 +828,7 @@ export default function App() {
           <div style={{ fontSize: 13, color: C.gray, marginBottom: 16 }}>궁금한 사람과의 기운을 살펴보세요.</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
             {[{ emoji: "❤️‍🔥", title: "연애 궁합" }, { emoji: "💍", title: "결혼 궁합" }, { emoji: "🤝", title: "친구 궁합" }, { emoji: "👶", title: "자식 궁합" }].map((c, i) => (
-              <Card key={i} onClick={() => setDetailId("match")} style={{ cursor: "pointer", padding: "20px 16px" }}>
+              <Card key={i} onClick={() => setDetailId("match")} style={{ cursor: "pointer", padding: "20px 16px", textAlign: "center" }}>
                 <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>{c.title}</div>
                 <div style={{ fontSize: 36 }}>{c.emoji}</div>
               </Card>
