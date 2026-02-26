@@ -69,8 +69,8 @@ function GradientBtn({ children, onClick, gradient, style }) {
   );
 }
 
-function Card({ children, style, onClick }) {
-  return <div onClick={onClick} style={{ background: C.white, borderRadius: 20, padding: "24px 20px", ...style }}>{children}</div>;
+function Card({ children, style, onClick, className }) {
+  return <div onClick={onClick} className={className} style={{ background: C.white, borderRadius: 20, padding: "24px 20px", ...style }}>{children}</div>;
 }
 
 // TDS ProgressBar 래핑 — 레이블·점수 표시 포함
@@ -680,12 +680,7 @@ export default function App() {
           <div style={{ textAlign: "center", position: "relative", zIndex: 1 }}>
             <EnergyOrb size={130} />
             <h2 style={{ color: "#fff", fontSize: 24, fontWeight: 800, margin: "20px 0 8px" }}>오늘의 운세가<br />도착했어요</h2>
-            <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 14, margin: "0 0 24px" }}>운세 확인하고 행운의 복주머니도 받아가세요.</p>
-            <div style={{ maxWidth: 300, margin: "0 auto" }}>
-              <Button color="light" display="full" size="xlarge" style={{ borderRadius: 14 }}>
-                오늘의 운세 열어보기 ›
-              </Button>
-            </div>
+            <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 14, margin: 0 }}>운세 확인하고 행운의 복주머니도 받아가세요.</p>
           </div>
         </div>
 
@@ -806,7 +801,7 @@ export default function App() {
               { id: "health", emoji: "💪", title: "건강운" },
               { id: "work", emoji: "📈", title: "직장운" },
             ].map((c) => (
-              <Card key={c.id} onClick={() => setDetailId(c.id)} style={{ cursor: "pointer", padding: "20px 16px", textAlign: "center" }}>
+              <Card key={c.id} className="fortune-card" onClick={() => setDetailId(c.id)} style={{ cursor: "pointer", padding: "20px 16px", textAlign: "center" }}>
                 <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>{c.title}</div>
                 <div style={{ fontSize: 36 }}>{c.emoji}</div>
               </Card>
@@ -817,7 +812,7 @@ export default function App() {
           <div style={{ fontSize: 13, color: C.gray, marginBottom: 16 }}>오늘 돈의 흐름을 가볍게 확인해보세요.</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
             {[{ id: "luck", emoji: "🎰", title: "로또운" }, { id: "money", emoji: "📊", title: "주식운" }].map((c) => (
-              <Card key={c.id} onClick={() => setDetailId(c.id)} style={{ cursor: "pointer", padding: "20px 16px", textAlign: "center" }}>
+              <Card key={c.id} className="fortune-card" onClick={() => setDetailId(c.id)} style={{ cursor: "pointer", padding: "20px 16px", textAlign: "center" }}>
                 <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>{c.title}</div>
                 <div style={{ fontSize: 36 }}>{c.emoji}</div>
               </Card>
@@ -828,7 +823,7 @@ export default function App() {
           <div style={{ fontSize: 13, color: C.gray, marginBottom: 16 }}>궁금한 사람과의 기운을 살펴보세요.</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
             {[{ emoji: "❤️‍🔥", title: "연애 궁합" }, { emoji: "💍", title: "결혼 궁합" }, { emoji: "🤝", title: "친구 궁합" }, { emoji: "👶", title: "자식 궁합" }].map((c, i) => (
-              <Card key={i} onClick={() => setDetailId("match")} style={{ cursor: "pointer", padding: "20px 16px", textAlign: "center" }}>
+              <Card key={i} className="fortune-card" onClick={() => setDetailId("match")} style={{ cursor: "pointer", padding: "20px 16px", textAlign: "center" }}>
                 <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>{c.title}</div>
                 <div style={{ fontSize: 36 }}>{c.emoji}</div>
               </Card>
