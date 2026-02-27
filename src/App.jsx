@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button, ProgressBar, TextField } from "@toss/tds-mobile";
+import { IAP } from "@apps-in-toss/web-framework";
 
 const C = {
   blue: "#3182F6", dark: "#191F28", gray: "#8B95A1", lightGray: "#F2F4F6",
@@ -187,17 +188,17 @@ const genFortune = (y, m, d, lunarY) => {
 };
 
 const premiumItems = [
-  { icon: "🔥", title: "2026 신년 사주", origPrice: "21,900원", price: "4,400원", discount: "80%", desc: "올해의 대운과 세운을 총망라한 신년 특별 분석", featured: true },
-  { icon: "💰", title: "내 말년 운세, 돈 걱정 없이 편안할까?", price: "2,200원", desc: "노후 재물운과 재테크 방향 분석" },
-  { icon: "💪", title: "갱년기와 중년 건강, 어디를 조심할까?", price: "2,200원", desc: "건강 취약 시기와 관리 포인트" },
-  { icon: "🍀", title: "나에게도 횡재수가 있을까? 로또/투자", price: "2,200원", desc: "금전 행운의 시기와 투자 적기" },
-  { icon: "🛡️", title: "올해 피해야 할 삼재와 액운은?", price: "2,200원", desc: "주의할 시기와 액막이 방법" },
-  { icon: "⭐", title: "내 인생의 황금기, 아직 남았을까?", price: "2,200원", desc: "대운 흐름으로 보는 인생 전환점" },
-  { icon: "🏖️", title: "은퇴 후 삶, 어떻게 보내면 좋을까?", price: "2,200원", desc: "은퇴 시기와 노후 생활 방향" },
-  { icon: "💼", title: "제2의 직업, 나에게 맞을까?", price: "2,200원", desc: "전직/부업 적성과 시기 분석" },
-  { icon: "👨‍👩‍👧‍👦", title: "가족 간 갈등, 언제쯤 풀릴까?", price: "2,200원", desc: "가족 관계 개선 시기와 방향" },
-  { icon: "🏪", title: "소소하게 가게라도 해볼까? 창업운", price: "2,200원", desc: "창업 적성, 시기, 업종 분석" },
-  { icon: "🏠", title: "이사/매매, 지금 움직여도 될까요?", price: "2,200원", desc: "이사 방위와 부동산 매매 시기" },
+  { icon: "🔥", title: "2026 신년 사주", origPrice: "21,900원", price: "4,400원", discount: "80%", desc: "올해의 대운과 세운을 총망라한 신년 특별 분석", featured: true, sku: "saju_yearly_2026" },
+  { icon: "💰", title: "내 말년 운세, 돈 걱정 없이 편안할까?", price: "2,200원", desc: "노후 재물운과 재테크 방향 분석", sku: "saju_lateyear" },
+  { icon: "💪", title: "갱년기와 중년 건강, 어디를 조심할까?", price: "2,200원", desc: "건강 취약 시기와 관리 포인트", sku: "saju_health_midlife" },
+  { icon: "🍀", title: "나에게도 횡재수가 있을까? 로또/투자", price: "2,200원", desc: "금전 행운의 시기와 투자 적기", sku: "saju_windfall" },
+  { icon: "🛡️", title: "올해 피해야 할 삼재와 액운은?", price: "2,200원", desc: "주의할 시기와 액막이 방법", sku: "saju_samjae" },
+  { icon: "⭐", title: "내 인생의 황금기, 아직 남았을까?", price: "2,200원", desc: "대운 흐름으로 보는 인생 전환점", sku: "saju_peaklife" },
+  { icon: "🏖️", title: "은퇴 후 삶, 어떻게 보내면 좋을까?", price: "2,200원", desc: "은퇴 시기와 노후 생활 방향", sku: "saju_retirement" },
+  { icon: "💼", title: "제2의 직업, 나에게 맞을까?", price: "2,200원", desc: "전직/부업 적성과 시기 분석", sku: "saju_career2" },
+  { icon: "👨‍👩‍👧‍👦", title: "가족 간 갈등, 언제쯤 풀릴까?", price: "2,200원", desc: "가족 관계 개선 시기와 방향", sku: "saju_family" },
+  { icon: "🏪", title: "소소하게 가게라도 해볼까? 창업운", price: "2,200원", desc: "창업 적성, 시기, 업종 분석", sku: "saju_business" },
+  { icon: "🏠", title: "이사/매매, 지금 움직여도 될까요?", price: "2,200원", desc: "이사 방위와 부동산 매매 시기", sku: "saju_realestate" },
 ];
 
 // 그라데이션 특수 버튼 (TDS Button이 지원하지 않는 금색·보라색 그라데이션용)
@@ -458,16 +459,14 @@ function TabBar({ active, onTab }) {
   const tabs = [
     { id: "saju", icon: "🔮", label: "사주" },
     { id: "premium", icon: "💎", label: "프리미엄" },
-    { id: "point", icon: "🧧", label: "복주머니" },
     { id: "my", icon: "👤", label: "내정보" },
   ];
   return (
     <div style={{ position: "sticky", bottom: 0, background: C.white, borderTop: "1px solid #E8EBED", display: "flex", padding: "8px 0 12px", zIndex: 50 }}>
       {tabs.map((t) => (
-        <div key={t.id} onClick={() => onTab(t.id)} style={{ flex: 1, textAlign: "center", cursor: "pointer", position: "relative" }}>
+        <div key={t.id} onClick={() => onTab(t.id)} style={{ flex: 1, textAlign: "center", cursor: "pointer" }}>
           <div style={{ fontSize: 22, opacity: active === t.id ? 1 : 0.35 }}>{t.icon}</div>
           <div style={{ fontSize: 11, fontWeight: active === t.id ? 700 : 500, marginTop: 2, color: active === t.id ? C.dark : C.gray }}>{t.label}</div>
-          {t.id === "point" && <div style={{ position: "absolute", top: -2, right: "28%", width: 8, height: 8, borderRadius: 4, background: C.red }} />}
         </div>
       ))}
     </div>
@@ -562,8 +561,6 @@ export default function App() {
   const [detailId, setDetailId] = useState(null);
   const [timeDetailId, setTimeDetailId] = useState(null);
   const [registered, setRegistered] = useState(false);
-  const [pointCount, setPointCount] = useState(0);
-  const [showPaySheet, setShowPaySheet] = useState(null);
   const [aiResult, setAiResult] = useState(null); // { item, text, loading, error }
   const [legalDoc, setLegalDoc] = useState(null); // 'terms' | 'privacy' | null
   const [todayDate] = useState(() => {
@@ -596,21 +593,50 @@ export default function App() {
     setTimeDetailId(null);
   };
 
-  const handlePremiumClick = async (item) => {
+  const handlePremiumClick = (item) => {
     if (!result) return;
-    const y = result.year, m = result.month, d = result.day;
-    const lunarY = getLunarYear(y, m, d);
-    const ms = calcManseok(y, m, d, hour, lunarY);
-    setAiResult({ item, text: "", loading: true, error: null });
+
+    const runAnalysis = async () => {
+      const y = result.year, m = result.month, d = result.day;
+      const lunarY = getLunarYear(y, m, d);
+      const ms = calcManseok(y, m, d, hour, lunarY);
+      setAiResult({ item, text: "", loading: true, error: null });
+      try {
+        await callClaude(
+          { year: y, month: m, day: d, gender, ms },
+          item.title,
+          (partial) => setAiResult(prev => ({ ...prev, text: partial }))
+        );
+        setAiResult(prev => ({ ...prev, loading: false }));
+      } catch (e) {
+        setAiResult(prev => ({ ...prev, loading: false, error: e.message }));
+      }
+    };
+
     try {
-      await callClaude(
-        { year: y, month: m, day: d, gender, ms },
-        item.title,
-        (partial) => setAiResult(prev => ({ ...prev, text: partial }))
-      );
-      setAiResult(prev => ({ ...prev, loading: false }));
-    } catch (e) {
-      setAiResult(prev => ({ ...prev, loading: false, error: e.message }));
+      // 앱인토스 인앱결제 (Toss 앱 환경)
+      const cleanup = IAP.createOneTimePurchaseOrder({
+        options: {
+          sku: item.sku,
+          processProductGrant: () => true,
+        },
+        onEvent: async (event) => {
+          cleanup();
+          if (event.type === "success") {
+            await runAnalysis();
+          }
+        },
+        onError: (error) => {
+          cleanup();
+          const code = error?.code;
+          if (code !== "USER_CANCELED") {
+            setAiResult({ item, text: "", loading: false, error: `결제 오류가 발생했어요. (${code || "오류"})` });
+          }
+        },
+      });
+    } catch {
+      // 개발/웹 환경 폴백: 결제 없이 바로 분석
+      runAnalysis();
     }
   };
 
@@ -640,7 +666,7 @@ export default function App() {
             <div style={{ width: "100%", maxWidth: 340, marginTop: 40 }}>
               {[
                 { icon: "🔮", color: C.purple, title: "만세력 기반 정밀 사주", desc: "정확한 천간·지지 분석으로 운세를 읽습니다" },
-                { icon: "🧧", color: C.red, title: "매일 받는 복주머니", desc: "운세 확인하고 토스 포인트도 받으세요" },
+                { icon: "💳", color: C.blue, title: "토스페이 간편 결제", desc: "토스 앱으로 1초 만에 간편하게 결제해요" },
                 { icon: "📊", color: C.gold, title: "프리미엄 심층 리포트", desc: "인생 총운부터 재물·건강·연애운까지" },
               ].map((f, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: i < 2 ? 20 : 0 }}>
@@ -845,48 +871,6 @@ export default function App() {
             </div>
           )}
 
-          {/* TDS 스펙 준수 결제 바텀시트 */}
-          {showPaySheet && (
-            <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", zIndex: 100, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setShowPaySheet(null)}>
-              <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 440, background: C.white, borderRadius: "20px 20px 0 0", padding: "28px 20px 32px" }}>
-                <div style={{ width: 40, height: 4, background: "#D1D6DB", borderRadius: 2, margin: "0 auto 24px" }} />
-                <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
-                  <span style={{ fontSize: 36 }}>{showPaySheet.icon}</span>
-                  <div>
-                    <div style={{ fontSize: 17, fontWeight: 800 }}>{showPaySheet.title}</div>
-                    <div style={{ fontSize: 13, color: C.gray, marginTop: 2 }}>{showPaySheet.desc}</div>
-                  </div>
-                </div>
-                <div style={{ background: C.lightGray, borderRadius: 12, padding: 16, marginBottom: 20 }}>
-                  {showPaySheet.origPrice && (
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                      <span style={{ fontSize: 14, color: C.gray }}>정가</span>
-                      <span style={{ fontSize: 14, color: C.gray, textDecoration: "line-through" }}>{showPaySheet.origPrice}</span>
-                    </div>
-                  )}
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: 14, fontWeight: 600 }}>결제 금액</span>
-                    <span style={{ fontSize: 18, fontWeight: 800, color: C.dark }}>{showPaySheet.price}</span>
-                  </div>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", background: C.lightGray, borderRadius: 12, marginBottom: 20 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 8, background: C.blue, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <span style={{ color: "#fff", fontSize: 14, fontWeight: 800 }}>T</span>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 14, fontWeight: 700 }}>토스페이</div>
-                    <div style={{ fontSize: 12, color: C.gray }}>간편 결제</div>
-                  </div>
-                </div>
-                <GradientBtn gradient={`linear-gradient(135deg, ${C.purple}, ${C.pink})`}>
-                  {showPaySheet.price} 결제하기
-                </GradientBtn>
-                <div style={{ textAlign: "center", marginTop: 12 }}>
-                  <span onClick={() => setShowPaySheet(null)} style={{ fontSize: 14, color: C.gray, cursor: "pointer" }}>취소</span>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       );
     }
@@ -939,32 +923,6 @@ export default function App() {
           <div style={{ height: 80 }} />
           <TabBar active={tab} onTab={handleTabChange} />
           {legalDoc && <LegalModal docKey={legalDoc} onClose={() => setLegalDoc(null)} />}
-        </div>
-      );
-    }
-
-    // --- POINT TAB ---
-    if (tab === "point") {
-      return (
-        <div style={wrap}>
-          <Header title="복주머니" />
-          <div style={{ background: `linear-gradient(135deg, ${C.red}15, ${C.gold}10)`, padding: "32px 20px", textAlign: "center" }}>
-            <span style={{ fontSize: 48 }}>🧧</span>
-            <div style={{ fontSize: 28, fontWeight: 800, marginTop: 12 }}>내 복주머니 {pointCount}개</div>
-            <div style={{ fontSize: 14, color: C.gray, marginTop: 8 }}>복주머니로 토스 포인트를 받을 수 있어요</div>
-          </div>
-          <div style={{ padding: 20 }}>
-            <Card style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>복주머니 모으는 방법</div>
-              <div style={{ fontSize: 13, color: C.gray, lineHeight: 1.8 }}>
-                매일 오늘의 운세 확인하기 → 복주머니 1개<br />
-                분야별 운세 확인하기 → 복주머니 1개<br />
-                친구에게 공유하기 → 복주머니 2개
-              </div>
-            </Card>
-          </div>
-          <div style={{ height: 80 }} />
-          <TabBar active={tab} onTab={handleTabChange} />
         </div>
       );
     }
@@ -1055,14 +1013,14 @@ export default function App() {
             <div style={{ display: "inline-flex", alignItems: "center", gap: 10, background: "rgba(0,0,0,0.3)", backdropFilter: "blur(8px)", borderRadius: 24, padding: "8px 20px" }}>
               <span style={{ color: "#fff", fontSize: 14, fontWeight: 600 }}>{todayDate}</span>
               <span style={{ width: 1, height: 16, background: "rgba(255,255,255,0.2)" }} />
-              <span style={{ fontSize: 14 }}>🧧</span>
-              <span style={{ color: "#fff", fontSize: 14, fontWeight: 600 }}>내 복주머니 {pointCount}개</span>
+              <span style={{ fontSize: 14 }}>🔮</span>
+              <span style={{ color: "#fff", fontSize: 14, fontWeight: 600 }}>오늘의 운세</span>
             </div>
           </div>
           <div style={{ textAlign: "center", position: "relative", zIndex: 1 }}>
             <EnergyOrb size={130} />
             <h2 style={{ color: "#fff", fontSize: 24, fontWeight: 800, margin: "20px 0 8px" }}>오늘의 운세가<br />도착했어요</h2>
-            <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 14, margin: 0 }}>운세 확인하고 행운의 복주머니도 받아가세요.</p>
+            <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 14, margin: 0 }}>만세력 기반으로 오늘의 운세를 살펴보세요.</p>
           </div>
         </div>
 
