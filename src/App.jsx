@@ -10,6 +10,152 @@ const C = {
 
 const getElement = (y) => ["metal","metal","water","water","wood","wood","fire","fire","earth","earth"][y % 10];
 const getAnimal = (y) => ["원숭이","닭","개","돼지","쥐","소","호랑이","토끼","용","뱀","말","양"][y % 12];
+
+// 음력 설날(춘절) 양력 날짜 — 띠/천간은 설날 기준 (이전이면 전년도)
+const lunarNewYear = {
+  1930:[1,30],1931:[2,17],1932:[2,6],1933:[1,26],1934:[2,14],1935:[2,4],1936:[1,24],1937:[2,11],1938:[1,31],1939:[2,19],
+  1940:[2,8],1941:[1,27],1942:[2,15],1943:[2,5],1944:[1,25],1945:[2,13],1946:[2,2],1947:[1,22],1948:[2,10],1949:[1,29],
+  1950:[2,17],1951:[2,6],1952:[1,27],1953:[2,14],1954:[2,3],1955:[1,24],1956:[2,12],1957:[1,31],1958:[2,18],1959:[2,8],
+  1960:[1,28],1961:[2,15],1962:[2,5],1963:[1,25],1964:[2,13],1965:[2,2],1966:[1,21],1967:[2,9],1968:[1,30],1969:[2,17],
+  1970:[2,6],1971:[1,27],1972:[2,15],1973:[2,3],1974:[1,23],1975:[2,11],1976:[1,31],1977:[2,18],1978:[2,7],1979:[1,28],
+  1980:[2,16],1981:[2,5],1982:[1,25],1983:[2,13],1984:[2,2],1985:[2,20],1986:[2,9],1987:[1,29],1988:[2,17],1989:[2,6],
+  1990:[1,27],1991:[2,15],1992:[2,4],1993:[1,23],1994:[2,10],1995:[1,31],1996:[2,19],1997:[2,7],1998:[1,28],1999:[2,16],
+  2000:[2,5],2001:[1,24],2002:[2,12],2003:[2,1],2004:[1,22],2005:[2,9],2006:[1,29],2007:[2,18],2008:[2,7],2009:[1,26],
+  2010:[2,14],2011:[2,3],2012:[1,23],2013:[2,10],2014:[1,31],2015:[2,19],2016:[2,8],2017:[1,28],2018:[2,16],2019:[2,5],
+  2020:[1,25],2021:[2,12],2022:[2,1],2023:[1,22],2024:[2,10],2025:[1,29],2026:[2,17],
+};
+const getLunarYear = (y, m, d) => {
+  const entry = lunarNewYear[y];
+  if (!entry) return y;
+  const [nm, nd] = entry;
+  return (m < nm || (m === nm && d < nd)) ? y - 1 : y;
+};
+
+// ====== 만세력(四柱) 계산 ======
+const GAN     = ["갑","을","병","정","무","기","경","신","임","계"];
+const GAN_HAN = ["甲","乙","丙","丁","戊","己","庚","辛","壬","癸"];
+const JI      = ["자","축","인","묘","진","사","오","미","신","유","술","해"];
+const JI_HAN  = ["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"];
+
+const getJDN = (year, month, day) => {
+  const a = Math.floor((14 - month) / 12);
+  const y = year + 4800 - a;
+  const m = month + 12 * a - 3;
+  return day + Math.floor((153 * m + 2) / 5) + 365 * y +
+    Math.floor(y / 4) - Math.floor(y / 100) + Math.floor(y / 400) - 32045;
+};
+const pillarStr = (s, b) => `${GAN[s]}${GAN_HAN[s]}/${JI[b]}${JI_HAN[b]}`;
+// 절기 기준일(근사): 소한·입춘·경칩·청명·입하·망종·소서·입추·백로·한로·입동·대설
+const JEOLGI = [6, 4, 6, 5, 6, 6, 7, 7, 8, 8, 7, 7];
+const MB_MAP = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0]; // 월별 월지 인덱스
+
+const calcYearPillar = (lunarY) => {
+  const s = ((lunarY - 4) % 10 + 10) % 10;
+  const b = ((lunarY - 4) % 12 + 12) % 12;
+  return { s, b, str: pillarStr(s, b) };
+};
+const calcMonthPillar = (lunarY, sm, sd) => {
+  const ys = ((lunarY - 4) % 10 + 10) % 10;
+  const b = sd < JEOLGI[sm - 1] ? MB_MAP[(sm - 2 + 12) % 12] : MB_MAP[sm - 1];
+  const s = ([2, 4, 6, 8, 0][ys % 5] + (b - 2 + 12) % 12) % 10;
+  return { s, b, str: pillarStr(s, b) };
+};
+// 기준: 양력 1984년 2월 2일 = 甲子日(index 0), JDN=2445733
+const calcDayPillar = (year, month, day) => {
+  const d60 = ((getJDN(year, month, day) - 2445733) % 60 + 60) % 60;
+  return { s: d60 % 10, b: d60 % 12, str: pillarStr(d60 % 10, d60 % 12) };
+};
+const calcHourPillar = (ds, hourBranch) => {
+  const b = Math.max(0, JI.indexOf(hourBranch));
+  const s = ([0, 2, 4, 6, 8][ds % 5] + b) % 10;
+  return { s, b, str: hourBranch ? pillarStr(s, b) : "시 미입력" };
+};
+const calcManseok = (year, month, day, hourStr, lunarY) => {
+  const yp = calcYearPillar(lunarY);
+  const mp = calcMonthPillar(lunarY, month, day);
+  const dp = calcDayPillar(year, month, day);
+  const hBranch = hourStr ? hourStr.replace("시", "") : "";
+  const hp = calcHourPillar(dp.s, hBranch);
+  return { yp, mp, dp, hp };
+};
+
+// ====== Claude API 스트리밍 호출 ======
+const callClaude = async (birthInfo, itemTitle, onChunk) => {
+  const { year, month, day, gender, ms } = birthInfo;
+  const prompt = `당신은 30년 경력의 사주명리학 전문가입니다. 의뢰인의 사주를 아래와 같이 심층 분석해 주세요.
+
+[의뢰인 사주]
+• 양력 생년월일: ${year}년 ${month}월 ${day}일, ${gender}
+• 연주(年柱): ${ms.yp.str}년
+• 월주(月柱): ${ms.mp.str}월
+• 일주(日柱): ${ms.dp.str}일
+• 시주(時柱): ${ms.hp.str}
+
+[분석 항목]
+${itemTitle}
+
+[작성 형식 - 반드시 준수]
+아래 4개의 구분자를 정확히 그대로 사용하여 각 섹션을 구분하세요. 구분자 외 다른 제목이나 기호는 사용하지 마세요.
+
+##사주구조분석##
+이 사람의 오행 구성과 일주·월주·연주의 관계를 설명하고, 해당 분석 항목과 어떻게 연결되는지 300자 이상 서술하세요.
+
+##핵심운세풀이##
+분석 항목에 대해 오행 상생상극 이론을 바탕으로 강점과 약점을 300자 이상 설명하세요.
+
+##시기분석##
+올해(2026년 병오년)와 향후 3년간(2027~2028년)의 대운·세운을 분석하여 유리한 월과 주의할 시기를 300자 이상 서술하세요.
+
+##실천조언##
+분석 항목과 관련하여 구체적인 행동 방향, 피해야 할 것, 활용해야 할 것을 300자 이상 제시하세요.
+
+[주의사항]
+- 한국어 존댓말 사용
+- 각 섹션 내용은 자연스러운 문단으로 작성
+- 구분자(##...##) 외 별표·대시 등 특수기호 사용 금지
+- 추상적인 말 대신 구체적인 내용 위주로 작성`;
+  const resp = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": import.meta.env.VITE_ANTHROPIC_API_KEY,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true",
+    },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-6",
+      max_tokens: 4096,
+      stream: true,
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+  if (!resp.ok) {
+    const e = await resp.json().catch(() => ({}));
+    throw new Error(e.error?.message || `오류 (${resp.status})`);
+  }
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let fullText = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    const lines = decoder.decode(value, { stream: true }).split("\n");
+    for (const line of lines) {
+      if (!line.startsWith("data: ")) continue;
+      const raw = line.slice(6).trim();
+      if (!raw || raw === "[DONE]") continue;
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed.type === "content_block_delta" && parsed.delta?.type === "text_delta") {
+          fullText += parsed.delta.text;
+          onChunk(fullText);
+        }
+      } catch { /* JSON 파싱 오류 무시 */ }
+    }
+  }
+  return fullText;
+};
+
 const animalEmoji = {"쥐":"🐭","소":"🐮","호랑이":"🐯","토끼":"🐰","용":"🐲","뱀":"🐍","말":"🐴","양":"🐑","원숭이":"🐵","닭":"🐔","개":"🐶","돼지":"🐷"};
 const ojHaeng = {
   wood: { name: "목(木)", color: "#00C98D", emoji: "🌿", desc: "성장과 창의력" },
@@ -21,13 +167,14 @@ const ojHaeng = {
 const hStems = ["경(庚)","신(辛)","임(壬)","계(癸)","갑(甲)","을(乙)","병(丙)","정(丁)","무(戊)","기(己)"];
 const eBranches = ["신(申)","유(酉)","술(戌)","해(亥)","자(子)","축(丑)","인(寅)","묘(卯)","진(辰)","사(巳)","오(午)","미(未)"];
 
-const genFortune = (y, m, d) => {
+const genFortune = (y, m, d, lunarY) => {
+  const ly = lunarY ?? y;
   const s = (y * 31 + m * 17 + d * 13) % 100;
   return {
     total: 60 + (s % 35), wealth: 55 + ((s * 3) % 40), love: 50 + ((s * 7) % 45),
     health: 60 + ((s * 11) % 35), work: 58 + ((s * 13) % 37), luck: 30 + ((s * 17) % 60),
     todayStem: hStems[d % 10], todayBranch: eBranches[d % 12],
-    myStem: hStems[y % 10], myBranch: eBranches[y % 12],
+    myStem: hStems[ly % 10], myBranch: eBranches[ly % 12],
     summary: s > 50
       ? "오늘은 기운이 상승하는 날입니다. 적극적으로 움직이면 좋은 결과가 따릅니다. 특히 오후 시간대에 재물과 관련된 좋은 소식이 있을 수 있어요."
       : "차분하게 내면을 돌아보기 좋은 날입니다. 무리한 투자나 결정은 내일로 미루는 것이 현명합니다. 가까운 사람과의 대화에서 힌트를 얻을 수 있어요.",
@@ -156,6 +303,57 @@ function Particles() {
   );
 }
 
+// ====== 프리미엄 분석 섹션 파서 / 렌더러 ======
+const AI_SECTIONS = [
+  { key: "##사주구조분석##", title: "사주 구조 분석", icon: "🔮", color: "#7B61FF" },
+  { key: "##핵심운세풀이##", title: "핵심 운세 풀이", icon: "✨", color: "#D4A853" },
+  { key: "##시기분석##",     title: "구체적 시기 분석", icon: "📅", color: "#3182F6" },
+  { key: "##실천조언##",     title: "실천 조언",       icon: "💡", color: "#00C98D" },
+];
+
+function parseAiSections(text) {
+  const positions = AI_SECTIONS.map(s => ({ ...s, idx: text.indexOf(s.key) }))
+    .filter(s => s.idx !== -1)
+    .sort((a, b) => a.idx - b.idx);
+  return positions.map((s, i) => {
+    const start = s.idx + s.key.length;
+    const end = positions[i + 1]?.idx ?? text.length;
+    return { ...s, content: text.slice(start, end).trim() };
+  });
+}
+
+function AnalysisSections({ text, loading }) {
+  const sections = parseAiSections(text);
+  if (sections.length === 0) {
+    return (
+      <div style={{ fontSize: 15, color: "#4E5968", lineHeight: 1.9 }}>
+        {text}
+        {loading && <span style={{ display: "inline-block", width: 10, height: 16, background: "#7B61FF", borderRadius: 2, marginLeft: 3, verticalAlign: "middle", animation: "blink 0.9s step-end infinite" }} />}
+      </div>
+    );
+  }
+  return (
+    <>
+      {sections.map((s, i) => (
+        <div key={i} style={{ marginBottom: 16, borderRadius: 18, border: `1.5px solid ${s.color}30`, overflow: "hidden" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 18px", background: `${s.color}12` }}>
+            <span style={{ fontSize: 20 }}>{s.icon}</span>
+            <span style={{ fontSize: 15, fontWeight: 800, color: s.color }}>{s.title}</span>
+          </div>
+          <div style={{ padding: "16px 18px", background: "#fff" }}>
+            <p style={{ fontSize: 14, color: "#4E5968", lineHeight: 2, margin: 0 }}>
+              {s.content}
+              {loading && i === sections.length - 1 && (
+                <span style={{ display: "inline-block", width: 9, height: 15, background: s.color, borderRadius: 2, marginLeft: 3, verticalAlign: "middle", animation: "blink 0.9s step-end infinite" }} />
+              )}
+            </p>
+          </div>
+        </div>
+      ))}
+    </>
+  );
+}
+
 function TabBar({ active, onTab }) {
   const tabs = [
     { id: "saju", icon: "🔮", label: "사주" },
@@ -266,6 +464,7 @@ export default function App() {
   const [registered, setRegistered] = useState(false);
   const [pointCount, setPointCount] = useState(0);
   const [showPaySheet, setShowPaySheet] = useState(null);
+  const [aiResult, setAiResult] = useState(null); // { item, text, loading, error }
   const [todayDate] = useState(() => {
     const d = new Date();
     return `${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')} (${['일','월','화','수','목','금','토'][d.getDay()]})`;
@@ -279,8 +478,9 @@ export default function App() {
         if (p >= 100) {
           clearInterval(t);
           const y = parseInt(year), m = parseInt(month), d = parseInt(day);
-          setResult({ year: y, month: m, day: d, element: getElement(y), animal: getAnimal(y), fortune: genFortune(y, m, d) });
-          setTimeout(() => setScreen(S.AD), 400);
+          const lunarY = getLunarYear(y, m, d);
+          setResult({ year: y, month: m, day: d, element: getElement(lunarY), animal: getAnimal(lunarY), fortune: genFortune(y, m, d, lunarY) });
+          setTimeout(() => setScreen(S.RESULT), 400);
           return 100;
         }
         return p + Math.random() * 8 + 4;
@@ -293,6 +493,24 @@ export default function App() {
     setTab(id);
     if (id === "saju") setDetailId(null);
     setTimeDetailId(null);
+  };
+
+  const handlePremiumClick = async (item) => {
+    if (!result) return;
+    const y = result.year, m = result.month, d = result.day;
+    const lunarY = getLunarYear(y, m, d);
+    const ms = calcManseok(y, m, d, hour, lunarY);
+    setAiResult({ item, text: "", loading: true, error: null });
+    try {
+      await callClaude(
+        { year: y, month: m, day: d, gender, ms },
+        item.title,
+        (partial) => setAiResult(prev => ({ ...prev, text: partial }))
+      );
+      setAiResult(prev => ({ ...prev, loading: false }));
+    } catch (e) {
+      setAiResult(prev => ({ ...prev, loading: false, error: e.message }));
+    }
   };
 
   const canSubmit = year.length === 4 && month && day && gender;
@@ -430,11 +648,6 @@ export default function App() {
     );
   }
 
-  // ====== AD ======
-  if (screen === S.AD) {
-    return <AdOverlay onComplete={() => { setPointCount((p) => p + 1); setScreen(S.RESULT); }} />;
-  }
-
   // ====== RESULT ======
   if (screen === S.RESULT && result) {
     const el = ojHaeng[result.element];
@@ -460,7 +673,7 @@ export default function App() {
               </div>
             </Card>
             {premiumItems.map((item, i) => (
-              <div key={i} onClick={() => setShowPaySheet(item)} style={{ display: "flex", alignItems: "center", gap: 14, padding: "18px 0", borderBottom: i < premiumItems.length - 1 ? `1px solid ${C.lightGray}` : "none", cursor: "pointer" }}>
+              <div key={i} onClick={() => handlePremiumClick(item)} style={{ display: "flex", alignItems: "center", gap: 14, padding: "18px 0", borderBottom: i < premiumItems.length - 1 ? `1px solid ${C.lightGray}` : "none", cursor: "pointer" }}>
                 <div style={{ width: 52, height: 52, borderRadius: 14, background: item.featured ? `linear-gradient(135deg, ${C.gold}20, ${C.gold}08)` : C.lightGray, border: item.featured ? `1px solid ${C.gold}30` : "none", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <span style={{ fontSize: 26 }}>{item.icon}</span>
                 </div>
@@ -479,6 +692,49 @@ export default function App() {
           </div>
           <div style={{ height: 80 }} />
           <TabBar active={tab} onTab={handleTabChange} />
+
+          {/* AI 분석 결과 바텀시트 */}
+          {aiResult && (
+            <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.55)", zIndex: 100, display: "flex", alignItems: "flex-end", justifyContent: "center" }}
+              onClick={() => { if (!aiResult.loading) setAiResult(null); }}>
+              <div onClick={(e) => e.stopPropagation()}
+                style={{ width: "100%", maxWidth: 440, background: C.white, borderRadius: "20px 20px 0 0", padding: "28px 20px 40px", maxHeight: "78vh", overflowY: "auto" }}>
+                <div style={{ width: 40, height: 4, background: "#D1D6DB", borderRadius: 2, margin: "0 auto 24px" }} />
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+                  <span style={{ fontSize: 32 }}>{aiResult.item.icon}</span>
+                  <div style={{ fontSize: 17, fontWeight: 800 }}>{aiResult.item.title}</div>
+                </div>
+                {aiResult.loading && !aiResult.text && (
+                  <div style={{ textAlign: "center", padding: "40px 0" }}>
+                    <div style={{ fontSize: 40, marginBottom: 16 }}>🔮</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: C.purple }}>사주 분석 중...</div>
+                    <div style={{ fontSize: 13, color: C.gray, marginTop: 8 }}>만세력 기반으로 분석하고 있어요</div>
+                  </div>
+                )}
+                {aiResult.error && (
+                  <div style={{ textAlign: "center", padding: "20px 0" }}>
+                    <div style={{ fontSize: 14, color: C.red, marginBottom: 16 }}>{aiResult.error}</div>
+                    <button onClick={() => handlePremiumClick(aiResult.item)}
+                      style={{ padding: "12px 28px", borderRadius: 12, border: "none", background: C.purple, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+                      다시 시도
+                    </button>
+                  </div>
+                )}
+                <style>{`@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}`}</style>
+                {aiResult.text && (
+                  <AnalysisSections text={aiResult.text} loading={aiResult.loading} />
+                )}
+                {!aiResult.loading && !aiResult.error && (
+                  <div style={{ marginTop: 28 }}>
+                    <button onClick={() => setAiResult(null)}
+                      style={{ width: "100%", padding: "16px 0", borderRadius: 14, border: "none", background: C.lightGray, color: C.dark, fontSize: 16, fontWeight: 700, cursor: "pointer" }}>
+                      닫기
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* TDS 스펙 준수 결제 바텀시트 */}
           {showPaySheet && (
