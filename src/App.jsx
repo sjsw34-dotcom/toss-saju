@@ -1239,10 +1239,14 @@ export default function App() {
           <div style={{ fontSize: 11, color: C.gray, lineHeight: 1.8 }}>
             운명테라피 | 사주명리 전문 상담 (경력 15년+)<br />
             문의: unmyungtherapy@gmail.com<br />
-            이용약관 | 개인정보처리방침<br />
+            <span onClick={() => setLegalDoc("terms")} style={{ textDecoration: "underline", cursor: "pointer" }}>이용약관</span>
+            {" | "}
+            <span onClick={() => setLegalDoc("privacy")} style={{ textDecoration: "underline", cursor: "pointer" }}>개인정보처리방침</span>
+            <br />
             © 2026 운명테라피. All rights reserved.
           </div>
         </div>
+        {legalDoc && <LegalModal docKey={legalDoc} onClose={() => setLegalDoc(null)} />}
 
         <div style={{ height: 70 }} />
         <TabBar active={tab} onTab={handleTabChange} />
