@@ -354,6 +354,106 @@ function AnalysisSections({ text, loading }) {
   );
 }
 
+// ====== 법적 문서 ======
+const LEGAL_DOCS = {
+  terms: {
+    title: "이용약관",
+    sections: [
+      {
+        heading: "제1조 (목적)",
+        body: "이 약관은 운명테라피 사주(이하 '서비스')를 이용함에 있어 서비스 제공자와 이용자 간의 권리·의무 및 책임사항을 규정함을 목적으로 합니다.",
+      },
+      {
+        heading: "제2조 (서비스 내용)",
+        body: "서비스는 이용자가 입력한 생년월일 및 성별 정보를 바탕으로 만세력 기반 사주 분석 결과를 제공합니다. 분석 결과는 참고용이며, 실제 인생 결정에 대한 법적·의료적·재정적 조언을 대체하지 않습니다.",
+      },
+      {
+        heading: "제3조 (이용 조건)",
+        body: "서비스는 토스 앱을 통해 제공되며, 만 14세 이상 이용 가능합니다. 이용자는 정확한 정보를 입력해야 하며, 허위 정보 입력으로 인한 분석 오류에 대해 서비스 제공자는 책임지지 않습니다.",
+      },
+      {
+        heading: "제4조 (금지 행위)",
+        body: "이용자는 서비스를 통해 제공되는 분석 결과를 무단으로 복제·배포·상업적 이용하는 행위, 서비스의 정상적인 운영을 방해하는 행위, 타인의 정보를 도용하여 서비스를 이용하는 행위를 해서는 안 됩니다.",
+      },
+      {
+        heading: "제5조 (서비스 변경 및 중단)",
+        body: "서비스 제공자는 운영상·기술상 필요에 따라 서비스의 내용을 변경하거나 중단할 수 있습니다. 서비스 변경 또는 중단으로 인한 손해에 대해서는 법령이 정하는 경우를 제외하고 책임을 지지 않습니다.",
+      },
+      {
+        heading: "제6조 (면책 조항)",
+        body: "서비스를 통해 제공되는 사주 분석 결과는 전통 사주명리학 이론과 AI 기술을 결합한 참고 정보입니다. 서비스 제공자는 분석 결과의 정확성·완전성을 보장하지 않으며, 이용자가 분석 결과를 신뢰하여 발생한 결과에 대해 책임을 지지 않습니다.",
+      },
+      {
+        heading: "제7조 (분쟁 해결)",
+        body: "서비스 이용과 관련하여 발생한 분쟁은 대한민국 법률에 따라 해결하며, 관할 법원은 서비스 제공자의 본점 소재지 관할 법원으로 합니다.",
+      },
+      {
+        heading: "부칙",
+        body: "이 약관은 2025년 1월 1일부터 시행합니다.",
+      },
+    ],
+  },
+  privacy: {
+    title: "개인정보처리방침",
+    sections: [
+      {
+        heading: "1. 수집하는 개인정보 항목",
+        body: "서비스는 사주 분석을 위해 다음 정보를 수집합니다.\n• 생년월일 (양력)\n• 성별\n• 태어난 시간 (선택 입력)\n\n위 정보는 앱 세션 내에서만 사용되며, 서버나 데이터베이스에 저장되지 않습니다.",
+      },
+      {
+        heading: "2. 개인정보의 수집 및 이용 목적",
+        body: "수집한 정보는 오직 사주 분석 결과 생성을 위해서만 사용됩니다. 마케팅, 광고, 제3자 판매 등의 목적으로는 사용되지 않습니다.",
+      },
+      {
+        heading: "3. 개인정보의 보유 및 이용 기간",
+        body: "입력하신 생년월일 및 성별 정보는 앱을 종료하거나 새로고침하면 즉시 삭제됩니다. 별도의 서버 저장 또는 로그 기록을 하지 않습니다.",
+      },
+      {
+        heading: "4. 개인정보의 제3자 제공",
+        body: "서비스는 프리미엄 분석 기능 제공을 위해 Anthropic社의 Claude API를 사용합니다. 분석 요청 시 생년월일, 성별, 사주 정보가 Anthropic API 서버로 전송됩니다. Anthropic의 개인정보 처리방침은 anthropic.com에서 확인하실 수 있습니다. 이 외 다른 제3자에게 개인정보를 제공하지 않습니다.",
+      },
+      {
+        heading: "5. 이용자의 권리",
+        body: "이용자는 언제든지 앱 사용을 중단함으로써 정보 제공을 철회할 수 있습니다. 서비스는 별도 저장을 하지 않으므로 앱 종료 즉시 모든 정보가 삭제됩니다.",
+      },
+      {
+        heading: "6. 개인정보 보호책임자",
+        body: "개인정보 처리에 관한 문의사항이 있으시면 아래로 연락해 주세요.\n• 이메일: privacy@unmyeong-therapy.com\n• 처리 기간: 영업일 기준 3일 이내 답변",
+      },
+      {
+        heading: "부칙",
+        body: "이 방침은 2025년 1월 1일부터 시행합니다.",
+      },
+    ],
+  },
+};
+
+function LegalModal({ docKey, onClose }) {
+  const doc = LEGAL_DOCS[docKey];
+  if (!doc) return null;
+  return (
+    <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "#fff", zIndex: 300, overflowY: "auto", maxWidth: 440, margin: "0 auto" }}>
+      <div style={{ position: "sticky", top: 0, background: "#fff", borderBottom: "1px solid #E8EBED", padding: "14px 20px", display: "flex", alignItems: "center", gap: 12, zIndex: 10 }}>
+        <span onClick={onClose} style={{ fontSize: 20, cursor: "pointer", lineHeight: 1 }}>←</span>
+        <span style={{ fontSize: 17, fontWeight: 700 }}>{doc.title}</span>
+      </div>
+      <div style={{ padding: "24px 20px 60px" }}>
+        {doc.sections.map((s, i) => (
+          <div key={i} style={{ marginBottom: 28 }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "#191F28", marginBottom: 8 }}>{s.heading}</div>
+            <div style={{ fontSize: 14, color: "#4E5968", lineHeight: 1.9, whiteSpace: "pre-line" }}>{s.body}</div>
+          </div>
+        ))}
+        <div style={{ marginTop: 16, padding: "16px", background: "#F2F4F6", borderRadius: 12 }}>
+          <p style={{ fontSize: 12, color: "#8B95A1", margin: 0, lineHeight: 1.7 }}>
+            본 {doc.title}은 관련 법령 및 서비스 정책 변경에 따라 사전 고지 후 수정될 수 있습니다.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function TabBar({ active, onTab }) {
   const tabs = [
     { id: "saju", icon: "🔮", label: "사주" },
@@ -465,6 +565,7 @@ export default function App() {
   const [pointCount, setPointCount] = useState(0);
   const [showPaySheet, setShowPaySheet] = useState(null);
   const [aiResult, setAiResult] = useState(null); // { item, text, loading, error }
+  const [legalDoc, setLegalDoc] = useState(null); // 'terms' | 'privacy' | null
   const [todayDate] = useState(() => {
     const d = new Date();
     return `${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')} (${['일','월','화','수','목','금','토'][d.getDay()]})`;
@@ -562,8 +663,16 @@ export default function App() {
             >
               시작하기
             </GradientBtn>
+            <div style={{ textAlign: "center", marginTop: 16 }}>
+              <span style={{ fontSize: 12, color: "rgba(255,255,255,0.35)" }}>시작하면 </span>
+              <span onClick={() => setLegalDoc("terms")} style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", textDecoration: "underline", cursor: "pointer" }}>이용약관</span>
+              <span style={{ fontSize: 12, color: "rgba(255,255,255,0.35)" }}> 및 </span>
+              <span onClick={() => setLegalDoc("privacy")} style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", textDecoration: "underline", cursor: "pointer" }}>개인정보처리방침</span>
+              <span style={{ fontSize: 12, color: "rgba(255,255,255,0.35)" }}>에 동의하는 것으로 간주됩니다.</span>
+            </div>
           </div>
         </div>
+        {legalDoc && <LegalModal docKey={legalDoc} onClose={() => setLegalDoc(null)} />}
       </div>
     );
   }
@@ -810,9 +919,26 @@ export default function App() {
                 </div>
               </div>
             ))}
+            <div style={{ marginTop: 32 }}>
+              <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 16 }}>약관 및 정책</div>
+              {[
+                { label: "이용약관", key: "terms" },
+                { label: "개인정보처리방침", key: "privacy" },
+              ].map((item, i) => (
+                <div key={i} onClick={() => setLegalDoc(item.key)}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 0", borderBottom: i === 0 ? `1px solid ${C.lightGray}` : "none", cursor: "pointer" }}>
+                  <span style={{ fontSize: 15 }}>{item.label}</span>
+                  <span style={{ fontSize: 16, color: C.gray }}>›</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ marginTop: 24, textAlign: "center" }}>
+              <span style={{ fontSize: 12, color: C.gray }}>버전 1.0.0</span>
+            </div>
           </div>
           <div style={{ height: 80 }} />
           <TabBar active={tab} onTab={handleTabChange} />
+          {legalDoc && <LegalModal docKey={legalDoc} onClose={() => setLegalDoc(null)} />}
         </div>
       );
     }
