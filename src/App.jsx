@@ -859,7 +859,7 @@ export default function App() {
     if (tab === "premium") {
       return (
         <div style={wrap}>
-          <Header title="프리미엄 분석" />
+          <Header title="프리미엄 분석" onBack={() => handleTabChange("saju")} />
           <div style={{ padding: "20px" }}>
             <Card style={{ background: `linear-gradient(135deg, #1A1145, #2D1B69)`, marginBottom: 16, border: `1px solid ${C.gold}30` }}>
               <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
@@ -962,7 +962,7 @@ export default function App() {
     if (tab === "my") {
       return (
         <div style={wrap}>
-          <Header title="내정보" />
+          <Header title="내정보" onBack={() => handleTabChange("saju")} />
           <div style={{ padding: "24px 20px" }}>
             <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 12 }}>나의 사주</div>
             <Card style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>
@@ -1089,7 +1089,7 @@ export default function App() {
     // --- SAJU MAIN TAB ---
     return (
       <div style={wrap}>
-        <Header title="운명테라피 사주" />
+        <Header title="운명테라피 사주" onBack={() => setScreen(S.ONBOARD)} />
         <div style={{ background: "linear-gradient(180deg, #1A0F3C 0%, #3B1F7E 35%, #8B5CF6 70%, #C084FC 100%)", padding: "20px 20px 36px", position: "relative", overflow: "hidden" }}>
           <Particles />
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 20, position: "relative", zIndex: 1 }}>
