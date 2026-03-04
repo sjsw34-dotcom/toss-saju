@@ -9,4 +9,9 @@ export default defineConfig({
       },
     }),
   ],
+  server: {
+    proxy: {
+      '/api': 'https://toss-saju.vercel.app',
+    },
+  },
 })

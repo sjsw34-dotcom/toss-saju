@@ -144,7 +144,8 @@ ${thisYear+1}년, ${thisYear+2}년의 대운·세운 흐름도 서술하고,
 - 실제 만세력 수치(일주·월주·연주·오행분포) 반드시 인용
 - 구분자(##...##) 외 특수기호·별표·대시 사용 금지
 - 4개 섹션 모두 완성할 것`;
-  const resp = await fetch("https://toss-saju.vercel.app/api/claude", {
+  const apiBase = window.location.hostname === "localhost" ? "" : "https://toss-saju.vercel.app";
+  const resp = await fetch(`${apiBase}/api/claude`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ prompt }),
