@@ -552,6 +552,7 @@ export default function App() {
   const [timeDetailId, setTimeDetailId] = useState(null);
   const [registered, setRegistered] = useState(false);
   const [aiResult, setAiResult] = useState(null); // { item, text, loading, error }
+  const [purchasedResults, setPurchasedResults] = useState({}); // { [sku]: text }
   const [legalDoc, setLegalDoc] = useState(null); // 'terms' | 'privacy' | null
   const [todayDate] = useState(() => {
     const d = new Date();
@@ -586,17 +587,35 @@ export default function App() {
   const handlePremiumClick = (item) => {
     if (!result) return;
 
+    const storageKey = `saju_${item.sku}_${result.year}_${result.month}_${result.day}_${gender}`;
+
+    // 세션 캐시 확인
+    if (purchasedResults[storageKey]) {
+      setAiResult({ item, text: purchasedResults[storageKey], loading: false, error: null });
+      return;
+    }
+    // localStorage 확인 (앱 재시작 후에도 유지)
+    const saved = localStorage.getItem(storageKey);
+    if (saved) {
+      setPurchasedResults(prev => ({ ...prev, [storageKey]: saved }));
+      setAiResult({ item, text: saved, loading: false, error: null });
+      return;
+    }
+
     const runAnalysis = async () => {
       const y = result.year, m = result.month, d = result.day;
       const lunarY = getLunarYear(y, m, d);
       const ms = calcManseok(y, m, d, hour, lunarY);
       setAiResult({ item, text: "", loading: true, error: null });
       try {
+        let finalText = "";
         await callClaude(
           { year: y, month: m, day: d, gender, ms },
           item.title,
-          (partial) => setAiResult(prev => ({ ...prev, text: partial }))
+          (partial) => { finalText = partial; setAiResult(prev => ({ ...prev, text: partial })); }
         );
+        localStorage.setItem(storageKey, finalText);
+        setPurchasedResults(prev => ({ ...prev, [storageKey]: finalText }));
         setAiResult(prev => ({ ...prev, loading: false }));
       } catch (e) {
         setAiResult(prev => ({ ...prev, loading: false, error: e.message }));
