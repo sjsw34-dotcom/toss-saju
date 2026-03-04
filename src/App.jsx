@@ -884,52 +884,63 @@ export default function App() {
           <div style={{ height: 80 }} />
           <TabBar active={tab} onTab={handleTabChange} />
 
-          {/* AI 분석 결과 시트 */}
+          {/* AI 분석 결과 전체화면 */}
           {aiResult && (
-            <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.55)", zIndex: 100, display: "flex", alignItems: "flex-start", justifyContent: "center" }}
-              onClick={() => { if (!aiResult.loading) setAiResult(null); }}>
-              <div onClick={(e) => e.stopPropagation()}
-                style={{ width: "100%", maxWidth: 440, background: C.white, borderRadius: "0 0 20px 20px", padding: "56px 20px 40px", maxHeight: "85vh", overflowY: "auto" }}>
-                <div style={{ width: 40, height: 4, background: "#D1D6DB", borderRadius: 2, margin: "0 auto 24px" }} />
-                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-                  <span style={{ fontSize: 32 }}>{aiResult.item.icon}</span>
-                  <div style={{ fontSize: 17, fontWeight: 800 }}>{aiResult.item.title}</div>
-                </div>
-                {aiResult.loading && !aiResult.text && (
-                  <div style={{ textAlign: "center", padding: "40px 0" }}>
-                    <div style={{ fontSize: 40, marginBottom: 16 }}>🔮</div>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: C.purple }}>사주 분석 중...</div>
-                    <div style={{ fontSize: 13, color: C.gray, marginTop: 8 }}>만세력 기반으로 분석하고 있어요</div>
+            <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: C.white, zIndex: 100, display: "flex", flexDirection: "column", maxWidth: 440, margin: "0 auto" }}>
+              <style>{`
+                @keyframes orbPulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.15);opacity:0.7} }
+                @keyframes msgFade { 0%{opacity:0;transform:translateY(8px)} 100%{opacity:1;transform:translateY(0)} }
+              `}</style>
+
+              {/* 헤더 */}
+              <div style={{ display: "flex", alignItems: "center", padding: "52px 20px 16px", borderBottom: `1px solid ${C.lightGray}`, flexShrink: 0 }}>
+                <span style={{ fontSize: 28, marginRight: 12 }}>{aiResult.item.icon}</span>
+                <div style={{ fontSize: 17, fontWeight: 800, flex: 1 }}>{aiResult.item.title}</div>
+                {!aiResult.loading && (
+                  <button onClick={() => setAiResult(null)}
+                    style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer", color: C.gray, padding: "4px 8px" }}>✕</button>
+                )}
+              </div>
+
+              {/* 본문 */}
+              <div style={{ flex: 1, overflowY: "auto", padding: "24px 20px 40px" }}>
+                {aiResult.loading && (
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 400 }}>
+                    <div style={{ fontSize: 72, animation: "orbPulse 1.6s ease-in-out infinite", marginBottom: 32 }}>🔮</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: C.purple, marginBottom: 12 }}>사주를 분석하고 있어요</div>
+                    <div style={{ fontSize: 14, color: C.gray, lineHeight: 1.8, textAlign: "center", animation: "msgFade 0.6s ease" }}>
+                      30년 경력 사주 전문가의 시각으로<br />만세력을 풀어내고 있습니다.<br /><br />
+                      <span style={{ color: C.purple, fontWeight: 700 }}>잠시만 기다려 주세요 ✨</span>
+                    </div>
                   </div>
                 )}
                 {aiResult.error && (
-                  <div style={{ textAlign: "center", padding: "20px 0" }}>
-                    <div style={{ fontSize: 14, color: C.red, marginBottom: 16 }}>{aiResult.error}</div>
+                  <div style={{ textAlign: "center", padding: "60px 0" }}>
+                    <div style={{ fontSize: 14, color: C.red, marginBottom: 20 }}>{aiResult.error}</div>
                     <button onClick={() => handlePremiumClick(aiResult.item)}
-                      style={{ padding: "12px 28px", borderRadius: 12, border: "none", background: C.purple, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+                      style={{ padding: "14px 32px", borderRadius: 12, border: "none", background: C.purple, color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
                       다시 시도
                     </button>
                   </div>
                 )}
-                <style>{`@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}`}</style>
                 {aiResult.text && !aiResult.loading && (
                   <AnalysisSections text={aiResult.text} loading={false} />
                 )}
-                {!aiResult.loading && !aiResult.error && aiResult.text && (
-                  <div style={{ marginTop: 28, display: "flex", gap: 10 }}>
-                    <button onClick={() => {
-                        navigator.clipboard.writeText(aiResult.text).catch(() => {});
-                      }}
-                      style={{ flex: 1, padding: "16px 0", borderRadius: 14, border: "none", background: C.lightGray, color: C.dark, fontSize: 16, fontWeight: 700, cursor: "pointer" }}>
-                      📋 복사
-                    </button>
-                    <button onClick={() => setAiResult(null)}
-                      style={{ flex: 1, padding: "16px 0", borderRadius: 14, border: "none", background: C.lightGray, color: C.dark, fontSize: 16, fontWeight: 700, cursor: "pointer" }}>
-                      닫기
-                    </button>
-                  </div>
-                )}
               </div>
+
+              {/* 하단 버튼 */}
+              {!aiResult.loading && !aiResult.error && aiResult.text && (
+                <div style={{ padding: "12px 20px 32px", display: "flex", gap: 10, flexShrink: 0, borderTop: `1px solid ${C.lightGray}` }}>
+                  <button onClick={() => navigator.clipboard.writeText(aiResult.text).catch(() => {})}
+                    style={{ flex: 1, padding: "16px 0", borderRadius: 14, border: "none", background: C.lightGray, color: C.dark, fontSize: 16, fontWeight: 700, cursor: "pointer" }}>
+                    📋 복사
+                  </button>
+                  <button onClick={() => setAiResult(null)}
+                    style={{ flex: 1, padding: "16px 0", borderRadius: 14, border: "none", background: C.purple, color: "#fff", fontSize: 16, fontWeight: 700, cursor: "pointer" }}>
+                    닫기
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
