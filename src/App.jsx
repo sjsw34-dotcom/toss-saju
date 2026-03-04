@@ -120,18 +120,20 @@ ${itemTitle} — ${itemDesc}
 아래 4개 구분자를 그대로 사용하세요. 구분자 외 다른 제목·기호·줄바꿈 구분선 사용 금지.
 
 ##사주구조분석##
-일간 ${ilgan}(${ilganElem}) 강약·용신·기신을 밝히고 [${itemTitle}]와의 연결을 3문장으로 압축하세요.
+일간 ${ilgan}(${ilganElem})의 강약(득령 여부), 오행 분포(${elemStr}), 용신·기신을 밝히세요.
+이 사주 구조가 [${itemTitle}] 주제와 어떻게 연결되는지 구체적으로 서술하세요. 300자.
 
 ##핵심운세풀이##
-[${itemTitle}]에서 이 사주의 핵심 강점 1가지, 주의점 1가지를 오행 수치(${elemStr}) 근거로 각 2문장씩 쓰세요.
+[${itemTitle}]에 대해 이 사주의 강점과 주의점을 오행 상생상극 원리와 실제 수치(${elemStr})를 근거로 서술하세요. 300자.
 
 ##시기분석##
-${thisYear}년 ${yearStem}${yearBranch}년 세운 영향 2문장. 유리한 달 1개, 주의할 달 1개를 반드시 명시하세요.
+${thisYear}년 ${yearStem}${yearBranch}년 세운이 이 사주에 미치는 영향을 서술하고,
+${thisYear+1}~${thisYear+2}년 흐름과 유리한 달·주의할 달을 명시하세요. 300자.
 
 ##실천조언##
-지금 바로 실천할 조언 3가지를 간결하게 쓰고, 희망적인 마무리 한 문장으로 끝내세요.
+용신 기반 실생활 조언과 피해야 할 것을 구체적으로 제시하고, 희망적인 마무리 문장으로 끝내세요. 250자.
 
-[준수사항] 한국어 존댓말 · 실제 사주 수치 인용 · 구분자 외 특수기호 금지 · 4섹션 완성 필수`;
+[준수사항] 한국어 존댓말 · 실제 만세력 수치 인용 필수 · 구분자 외 특수기호 금지 · 4섹션 완성 필수`;
   const apiBase = window.location.hostname === "localhost" ? "" : "https://toss-saju.vercel.app";
   const resp = await fetch(`${apiBase}/api/claude`, {
     method: "POST",
