@@ -884,12 +884,12 @@ export default function App() {
           <div style={{ height: 80 }} />
           <TabBar active={tab} onTab={handleTabChange} />
 
-          {/* AI 분석 결과 바텀시트 */}
+          {/* AI 분석 결과 시트 */}
           {aiResult && (
-            <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.55)", zIndex: 100, display: "flex", alignItems: "flex-end", justifyContent: "center" }}
+            <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.55)", zIndex: 100, display: "flex", alignItems: "flex-start", justifyContent: "center" }}
               onClick={() => { if (!aiResult.loading) setAiResult(null); }}>
               <div onClick={(e) => e.stopPropagation()}
-                style={{ width: "100%", maxWidth: 440, background: C.white, borderRadius: "20px 20px 0 0", padding: "28px 20px 40px", maxHeight: "78vh", overflowY: "auto" }}>
+                style={{ width: "100%", maxWidth: 440, background: C.white, borderRadius: "0 0 20px 20px", padding: "56px 20px 40px", maxHeight: "85vh", overflowY: "auto" }}>
                 <div style={{ width: 40, height: 4, background: "#D1D6DB", borderRadius: 2, margin: "0 auto 24px" }} />
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
                   <span style={{ fontSize: 32 }}>{aiResult.item.icon}</span>
