@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button, ProgressBar, TextField } from "@toss/tds-mobile";
-import { IAP } from "@apps-in-toss/web-framework";
+import { IAP, share, getTossShareLink } from "@apps-in-toss/web-framework";
 
 const C = {
   blue: "#3182F6", dark: "#191F28", gray: "#8B95A1", lightGray: "#F2F4F6",
@@ -880,8 +880,8 @@ export default function App() {
                   </div>
                 )}
                 <style>{`@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}`}</style>
-                {aiResult.text && (
-                  <AnalysisSections text={aiResult.text} loading={aiResult.loading} />
+                {aiResult.text && !aiResult.loading && (
+                  <AnalysisSections text={aiResult.text} loading={false} />
                 )}
                 {!aiResult.loading && !aiResult.error && (
                   <div style={{ marginTop: 28 }}>
@@ -1211,7 +1211,13 @@ export default function App() {
           </Card>
 
           <div style={{ marginBottom: 20 }}>
-            <Button color="light" variant="weak" display="full" size="xlarge">
+            <Button color="light" variant="weak" display="full" size="xlarge"
+              onClick={async () => {
+                try {
+                  const link = await getTossShareLink('intoss://my-sajuapp');
+                  await share({ message: `운명테라피 사주 - 나의 사주를 확인해보세요!\n${link}` });
+                } catch {}
+              }}>
               🔗 친구에게 공유하기
             </Button>
           </div>
