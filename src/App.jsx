@@ -574,7 +574,9 @@ export default function App() {
   const [purchasedResults, setPurchasedResults] = useState({}); // { [sku]: text }
   const [legalDoc, setLegalDoc] = useState(null); // 'terms' | 'privacy' | null
   const [devMode, setDevMode] = useState(false); // 개발 테스트 모드 (결제 우회)
+  const [toast, setToast] = useState(null); // 토스트 메시지
   const devTapRef = useRef({ count: 0, timer: null });
+  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2500); };
   const [todayDate] = useState(() => {
     const d = new Date();
     return `${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')} (${['일','월','화','수','목','금','토'][d.getDay()]})`;
@@ -1098,6 +1100,11 @@ export default function App() {
     // --- SAJU MAIN TAB ---
     return (
       <div style={wrap}>
+        {toast && (
+          <div style={{ position: "fixed", top: 60, left: "50%", transform: "translateX(-50%)", background: "#191F28", color: "#fff", padding: "12px 24px", borderRadius: 24, fontSize: 14, fontWeight: 700, zIndex: 9999, whiteSpace: "nowrap", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}>
+            {toast}
+          </div>
+        )}
         <Header title="운명테라피 사주" onBack={() => setScreen(S.ONBOARD)} devMode={devMode} onTitleTap={() => {
           const ref = devTapRef.current;
           ref.count += 1;
@@ -1106,7 +1113,7 @@ export default function App() {
             ref.count = 0;
             setDevMode(prev => {
               const next = !prev;
-              alert(next ? "🛠️ 개발 모드 ON — 결제 없이 분석 실행" : "개발 모드 OFF");
+              showToast(next ? "🛠️ DEV 모드 ON — 결제 없이 분석" : "DEV 모드 OFF");
               return next;
             });
           } else {
