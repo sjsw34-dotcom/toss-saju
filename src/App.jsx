@@ -111,24 +111,27 @@ ${thisYear}년 ${thisMonth}월 (${yearStem}${yearBranch}년)
 
 [작성 형식 - 반드시 준수]
 아래 4개의 구분자를 정확히 그대로 사용하여 각 섹션을 구분하세요. 구분자 외 다른 제목이나 기호는 사용하지 마세요.
+반드시 4개 섹션 모두 완성하고, ##실천조언## 섹션을 마지막 문장으로 마무리해야 합니다.
 
 ##사주구조분석##
-이 사람의 오행 구성과 일주·월주·연주의 관계를 설명하고, 해당 분석 항목과 어떻게 연결되는지 300자 이상 서술하세요.
+이 사람의 오행 구성과 일주·월주·연주의 관계를 설명하고, 해당 분석 항목과 어떻게 연결되는지 200자 내외로 서술하세요.
 
 ##핵심운세풀이##
-분석 항목에 대해 오행 상생상극 이론을 바탕으로 강점과 약점을 300자 이상 설명하세요.
+분석 항목에 대해 오행 상생상극 이론을 바탕으로 강점과 약점을 200자 내외로 설명하세요.
 
 ##시기분석##
-올해(${thisYear}년 ${yearStem}${yearBranch}년)와 향후 3년간(${thisYear+1}~${thisYear+2}년)의 대운·세운을 분석하여 유리한 월과 주의할 시기를 300자 이상 서술하세요.
+올해(${thisYear}년 ${yearStem}${yearBranch}년)와 향후 2년간(${thisYear+1}~${thisYear+2}년)의 대운·세운을 분석하여 유리한 시기와 주의할 시기를 200자 내외로 서술하세요.
 
 ##실천조언##
-분석 항목과 관련하여 구체적인 행동 방향, 피해야 할 것, 활용해야 할 것을 300자 이상 제시하세요.
+분석 항목과 관련하여 구체적인 행동 방향과 활용 포인트를 200자 내외로 제시하고, 희망적인 마무리 한 문장으로 끝내세요.
 
 [주의사항]
 - 한국어 존댓말 사용
 - 각 섹션 내용은 자연스러운 문단으로 작성
 - 구분자(##...##) 외 별표·대시 등 특수기호 사용 금지
-- 추상적인 말 대신 구체적인 내용 위주로 작성`;
+- 추상적인 말 대신 구체적인 내용 위주로 작성
+- 반드시 4개 섹션을 모두 완성할 것 (중간에 절대 끊기지 않도록)
+- 전체 응답은 간결하게 유지할 것`;
   const resp = await fetch("https://toss-saju.vercel.app/api/claude", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -652,6 +655,9 @@ export default function App() {
     };
 
     try {
+      // 결제 시작 즉시 로딩 화면 표시 (공백 방지)
+      setAiResult({ item, text: "", loading: true, error: null });
+
       // 앱인토스 인앱결제 (Toss 앱 환경)
       let analysisStarted = false;
       const startAnalysis = () => {
@@ -678,7 +684,9 @@ export default function App() {
         onError: (error) => {
           cleanup();
           const code = error?.code;
-          if (code !== "USER_CANCELED") {
+          if (code === "USER_CANCELED") {
+            setAiResult(null); // 취소 시 오버레이 닫기
+          } else {
             setAiResult({ item, text: "", loading: false, error: `결제 오류가 발생했어요. (${code || "오류"})` });
           }
         },
