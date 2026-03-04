@@ -11,7 +11,12 @@ export default defineConfig({
   ],
   server: {
     proxy: {
-      '/api': 'https://toss-saju.vercel.app',
+      '/api': {
+        target: 'https://toss-saju.vercel.app',
+        changeOrigin: true,
+        timeout: 90000,
+        proxyTimeout: 90000,
+      },
     },
   },
 })
