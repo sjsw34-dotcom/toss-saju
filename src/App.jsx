@@ -144,15 +144,16 @@ ${thisYear}년 ${yearStem}${yearBranch}년이 이 사주에 미치는 영향과,
   const reader = resp.body.getReader();
   const decoder = new TextDecoder();
   let fullText = "";
-  let buffer = ""; // 청크 경계에서 잘린 불완전한 줄을 버퍼링
+  let buffer = "";
+  let lastUpdate = 0;
   try {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
       buffer += decoder.decode(value, { stream: true });
-      // 완전한 줄(\n으로 끝나는)만 처리, 마지막 불완전 줄은 버퍼에 보관
       const parts = buffer.split("\n");
-      buffer = parts.pop() || ""; // 마지막 조각은 아직 불완전할 수 있음
+      buffer = parts.pop() || "";
+      let updated = false;
       for (const line of parts) {
         const trimmed = line.trim();
         if (!trimmed.startsWith("data: ")) continue;
@@ -162,11 +163,17 @@ ${thisYear}년 ${yearStem}${yearBranch}년이 이 사주에 미치는 영향과,
           const parsed = JSON.parse(raw);
           if (parsed.type === "content_block_delta" && parsed.delta?.type === "text_delta") {
             fullText += parsed.delta.text;
+            updated = true;
           }
-        } catch { /* JSON 파싱 실패 = 무시 */ }
+        } catch { /* 무시 */ }
+      }
+      // 실시간 UI 업데이트 (100ms 스로틀)
+      if (updated && Date.now() - lastUpdate > 100) {
+        onChunk(fullText);
+        lastUpdate = Date.now();
       }
     }
-    // 버퍼에 남은 마지막 줄 처리
+    // 버퍼 잔여 처리
     if (buffer.trim().startsWith("data: ")) {
       const raw = buffer.trim().slice(6).trim();
       if (raw && raw !== "[DONE]") {
@@ -181,7 +188,7 @@ ${thisYear}년 ${yearStem}${yearBranch}년이 이 사주에 미치는 영향과,
   } finally {
     reader.releaseLock();
   }
-  onChunk(fullText);
+  onChunk(fullText); // 최종 결과
   return fullText;
 };
 
