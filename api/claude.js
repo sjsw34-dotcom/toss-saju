@@ -17,10 +17,18 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { prompt } = req.body;
+    const { prompt, system } = req.body;
     if (!prompt) {
       return res.status(400).json({ error: "prompt is required" });
     }
+
+    const body = {
+      model: "claude-sonnet-4-6",
+      max_tokens: 8192,
+      stream: true,
+      messages: [{ role: "user", content: prompt }],
+    };
+    if (system) body.system = system;
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -29,12 +37,7 @@ export default async function handler(req, res) {
         "x-api-key": apiKey,
         "anthropic-version": "2023-06-01",
       },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 4096,
-        stream: true,
-        messages: [{ role: "user", content: prompt }],
-      }),
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
