@@ -144,15 +144,32 @@ ${thisYear}년 ${yearStem}${yearBranch}년이 이 사주에 미치는 영향과,
   const reader = resp.body.getReader();
   const decoder = new TextDecoder();
   let fullText = "";
+  let buffer = ""; // 청크 경계에서 잘린 불완전한 줄을 버퍼링
   try {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      const lines = decoder.decode(value, { stream: true }).split("\n");
-      for (const line of lines) {
-        if (!line.startsWith("data: ")) continue;
-        const raw = line.slice(6).trim();
+      buffer += decoder.decode(value, { stream: true });
+      // 완전한 줄(\n으로 끝나는)만 처리, 마지막 불완전 줄은 버퍼에 보관
+      const parts = buffer.split("\n");
+      buffer = parts.pop() || ""; // 마지막 조각은 아직 불완전할 수 있음
+      for (const line of parts) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith("data: ")) continue;
+        const raw = trimmed.slice(6).trim();
         if (!raw || raw === "[DONE]") continue;
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed.type === "content_block_delta" && parsed.delta?.type === "text_delta") {
+            fullText += parsed.delta.text;
+          }
+        } catch { /* JSON 파싱 실패 = 무시 */ }
+      }
+    }
+    // 버퍼에 남은 마지막 줄 처리
+    if (buffer.trim().startsWith("data: ")) {
+      const raw = buffer.trim().slice(6).trim();
+      if (raw && raw !== "[DONE]") {
         try {
           const parsed = JSON.parse(raw);
           if (parsed.type === "content_block_delta" && parsed.delta?.type === "text_delta") {
