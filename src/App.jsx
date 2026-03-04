@@ -909,7 +909,7 @@ export default function App() {
                     <div style={{ fontSize: 72, animation: "orbPulse 1.6s ease-in-out infinite", marginBottom: 32 }}>🔮</div>
                     <div style={{ fontSize: 18, fontWeight: 800, color: C.purple, marginBottom: 12 }}>사주를 분석하고 있어요</div>
                     <div style={{ fontSize: 14, color: C.gray, lineHeight: 1.8, textAlign: "center", animation: "msgFade 0.6s ease" }}>
-                      30년 경력 사주 전문가의 시각으로<br />만세력을 풀어내고 있습니다.<br /><br />
+                      15년 경력 사주 전문가의 시각으로<br />만세력을 풀어내고 있습니다.<br /><br />
                       <span style={{ color: C.purple, fontWeight: 700 }}>잠시만 기다려 주세요 ✨</span>
                     </div>
                   </div>
