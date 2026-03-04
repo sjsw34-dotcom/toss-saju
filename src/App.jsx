@@ -91,47 +91,56 @@ const callClaude = async (birthInfo, itemTitle, onChunk, itemDesc = "") => {
   const BRANCHES_KO = ["자","축","인","묘","진","사","오","미","신","유","술","해"];
   const yearStem = STEMS_KO[((thisYear - 4) % 10 + 10) % 10];
   const yearBranch = BRANCHES_KO[((thisYear - 4) % 12 + 12) % 12];
-  const prompt = `당신은 15년 경력의 사주명리학 전문가입니다. 의뢰인의 사주를 아래와 같이 심층 분석해 주세요.
 
-[현재 날짜]
-${thisYear}년 ${thisMonth}월 (${yearStem}${yearBranch}년)
+  // 오행 분포 계산
+  const GAN_ELEM = ["목","목","화","화","토","토","금","금","수","수"];
+  const JI_ELEM  = ["수","토","목","목","토","화","화","토","금","금","토","수"];
+  const elemCount = { 목:0, 화:0, 토:0, 금:0, 수:0 };
+  [ms.yp.s, ms.mp.s, ms.dp.s, ms.hp.s].forEach(s => { if (s >= 0) elemCount[GAN_ELEM[s % 10]]++; });
+  [ms.yp.b, ms.mp.b, ms.dp.b, ms.hp.b].forEach(b => { if (b >= 0) elemCount[JI_ELEM[b % 12]]++; });
+  const elemStr = Object.entries(elemCount).map(([k,v]) => `${k}(${v})`).join(" ");
+  const ilgan = GAN[ms.dp.s]; // 일간(日干) = 나 자신
+  const ilganElem = GAN_ELEM[ms.dp.s];
 
-[의뢰인 사주]
-• 입력 생년월일: ${birthInfo.inputDate.year}년 ${birthInfo.inputDate.month}월 ${birthInfo.inputDate.day}일 (${birthInfo.calType}${birthInfo.calType === "윤달" ? " - 윤달 적용" : ""})
-• 양력 환산일: ${year}년 ${month}월 ${day}일
-• 성별: ${gender}
-• 연주(年柱): ${ms.yp.str}년
-• 월주(月柱): ${ms.mp.str}월
-• 일주(日柱): ${ms.dp.str}일
-• 시주(時柱): ${ms.hp.str}
+  const prompt = `당신은 30년 경력의 사주명리학 전문가입니다. 아래 만세력 정보를 바탕으로 의뢰인의 사주를 깊이 있게 분석해 주세요.
 
-[분석 항목]
-• 주제: ${itemTitle}
-• 핵심 질문: ${itemDesc}
+[기준 날짜]
+${thisYear}년 ${thisMonth}월 현재 (${yearStem}${yearBranch}년)
 
-[작성 형식 - 반드시 준수]
-아래 4개의 구분자를 정확히 그대로 사용하여 각 섹션을 구분하세요. 구분자 외 다른 제목이나 기호는 사용하지 마세요.
-반드시 4개 섹션 모두 완성하고, ##실천조언## 섹션을 마지막 문장으로 마무리해야 합니다.
+[의뢰인 만세력]
+생년월일: ${birthInfo.inputDate.year}년 ${birthInfo.inputDate.month}월 ${birthInfo.inputDate.day}일 (${birthInfo.calType}) / 양력 ${year}년 ${month}월 ${day}일 / ${gender}
+연주(年柱): ${ms.yp.str} | 월주(月柱): ${ms.mp.str} | 일주(日柱): ${ms.dp.str} | 시주(時柱): ${ms.hp.str}
+일간(日干): ${ilgan}(${ilganElem}) — 이 사람의 본질적 자아
+오행 분포: ${elemStr}
+
+[분석 주제]
+${itemTitle} — ${itemDesc}
+
+[작성 형식]
+아래 4개 구분자를 그대로 사용하세요. 구분자 외 다른 제목·기호·줄바꿈 구분선 사용 금지.
 
 ##사주구조분석##
-이 사람의 오행 구성과 일주·월주·연주의 관계를 설명하고, 해당 분석 항목과 어떻게 연결되는지 200자 내외로 서술하세요.
+일간 ${ilgan}의 특성과 강약, 월령(月令) 득령 여부, 사주 전체 오행 균형(${elemStr})을 분석하세요.
+용신(用神)과 기신(忌神)이 무엇인지 명확히 짚고, 이 사주 구조가 [${itemTitle}] 주제와 어떻게 연결되는지 구체적으로 서술하세요. 400자 이상.
 
 ##핵심운세풀이##
-분석 항목에 대해 오행 상생상극 이론을 바탕으로 강점과 약점을 200자 내외로 설명하세요.
+[${itemTitle}]에 대해 이 사주가 가진 강점과 주의점을 오행 상생상극 원리로 구체적으로 분석하세요.
+단순 나열이 아닌, 이 사람만의 사주 특징(일간 ${ilgan}, 오행분포 ${elemStr})에서 비롯된 실질적인 내용으로 작성하세요. 400자 이상.
 
 ##시기분석##
-올해(${thisYear}년 ${yearStem}${yearBranch}년)와 향후 2년간(${thisYear+1}~${thisYear+2}년)의 대운·세운을 분석하여 유리한 시기와 주의할 시기를 200자 내외로 서술하세요.
+${thisYear}년 ${yearStem}${yearBranch}년 세운이 이 사주와 어떻게 작용하는지 분석하고,
+${thisYear+1}년, ${thisYear+2}년의 흐름도 대운·세운 관점에서 구체적으로 서술하세요.
+유리한 달(월)과 주의할 달을 가능한 한 구체적으로 언급하세요. 400자 이상.
 
 ##실천조언##
-분석 항목과 관련하여 구체적인 행동 방향과 활용 포인트를 200자 내외로 제시하고, 희망적인 마무리 한 문장으로 끝내세요.
+이 사주의 용신과 [${itemTitle}] 주제를 결합하여, 지금 당장 실천할 수 있는 구체적 행동 지침을 제시하세요.
+색상·방향·직업군·인간관계 등 실생활 적용 가능한 조언을 포함하고, 희망적인 마무리로 끝내세요. 350자 이상.
 
-[주의사항]
-- 한국어 존댓말 사용
-- 각 섹션 내용은 자연스러운 문단으로 작성
-- 구분자(##...##) 외 별표·대시 등 특수기호 사용 금지
-- 추상적인 말 대신 구체적인 내용 위주로 작성
-- 반드시 4개 섹션을 모두 완성할 것 (중간에 절대 끊기지 않도록)
-- 전체 응답은 간결하게 유지할 것`;
+[필수 준수사항]
+- 한국어 존댓말, 자연스러운 문단 형식
+- 이 사람의 실제 만세력 수치를 반드시 인용하며 분석 (추상적 일반론 금지)
+- 구분자(##...##) 외 특수기호·별표·대시 사용 금지
+- 반드시 4개 섹션 모두 완성 후 ##실천조언## 마지막 문장으로 종료`;
   const resp = await fetch("https://toss-saju.vercel.app/api/claude", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
