@@ -1,7 +1,7 @@
 import { defineConfig } from '@apps-in-toss/web-framework/config';
 
 export default defineConfig({
-  appName: 'unmyung-saju',
+  appName: 'my-sajuapp',
   brand: {
     displayName: '운명테라피 사주',
     primaryColor: '#7B61FF',

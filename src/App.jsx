@@ -115,7 +115,7 @@ ${itemTitle}
 - 각 섹션 내용은 자연스러운 문단으로 작성
 - 구분자(##...##) 외 별표·대시 등 특수기호 사용 금지
 - 추상적인 말 대신 구체적인 내용 위주로 작성`;
-  const resp = await fetch("/api/claude", {
+  const resp = await fetch("https://toss-saju.vercel.app/api/claude", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ prompt }),
