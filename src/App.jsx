@@ -81,12 +81,61 @@ const calcManseok = (year, month, day, hourStr, lunarY) => {
   return { yp, mp, dp, hp };
 };
 
-// ====== Claude API 스트리밍 호출 (2-파트 병렬) ======
-const streamOnePart = async (apiBase, system, prompt) => {
+// ====== Claude API 스트리밍 호출 ======
+const callClaude = async (birthInfo, itemTitle, onChunk, itemDesc = "") => {
+  const { year, month, day, gender, ms } = birthInfo;
+  const now = new Date();
+  const thisYear = now.getFullYear();
+  const thisMonth = now.getMonth() + 1;
+  const STEMS_KO = ["갑","을","병","정","무","기","경","신","임","계"];
+  const BRANCHES_KO = ["자","축","인","묘","진","사","오","미","신","유","술","해"];
+  const yearStem = STEMS_KO[((thisYear - 4) % 10 + 10) % 10];
+  const yearBranch = BRANCHES_KO[((thisYear - 4) % 12 + 12) % 12];
+
+  const GAN_ELEM = ["목","목","화","화","토","토","금","금","수","수"];
+  const JI_ELEM  = ["수","토","목","목","토","화","화","토","금","금","토","수"];
+  const elemCount = { 목:0, 화:0, 토:0, 금:0, 수:0 };
+  [ms.yp.s, ms.mp.s, ms.dp.s, ms.hp.s].forEach(s => { if (s >= 0) elemCount[GAN_ELEM[s % 10]]++; });
+  [ms.yp.b, ms.mp.b, ms.dp.b, ms.hp.b].forEach(b => { if (b >= 0) elemCount[JI_ELEM[b % 12]]++; });
+  const elemStr = Object.entries(elemCount).map(([k,v]) => `${k}(${v})`).join(" ");
+  const ilgan = GAN[ms.dp.s];
+  const ilganElem = GAN_ELEM[ms.dp.s];
+
+  const systemPrompt = `당신은 40년 경력의 사주명리학 대가입니다. 적천수, 자평진전, 궁통보감에 정통하며, 의뢰인의 실제 사주 글자와 오행 수치를 반드시 인용하여 구체적으로 분석합니다.
+추상적이거나 누구에게나 해당되는 말은 절대 하지 않습니다. 한국어 존댓말을 사용하고, 따뜻하지만 권위 있는 전문가 어조로 작성합니다.
+반드시 4개 섹션 구분자(##...##)를 모두 사용하고, 각 섹션을 400자 이상 충실히 작성하세요. 절대 중간에 끊거나 요약하지 마세요.`;
+
+  const prompt = `[만세력 정보]
+${thisYear}년 ${thisMonth}월 (${yearStem}${yearBranch}년)
+생년월일: ${birthInfo.inputDate.year}년 ${birthInfo.inputDate.month}월 ${birthInfo.inputDate.day}일 (${birthInfo.calType}) / 양력 ${year}.${month}.${day} / ${gender}
+연주: ${ms.yp.str} | 월주: ${ms.mp.str} | 일주: ${ms.dp.str} | 시주: ${ms.hp.str}
+일간: ${ilgan}(${ilganElem}) | 오행: ${elemStr}
+
+[분석 의뢰]
+"${itemTitle}" — ${itemDesc}
+
+[작성 규칙]
+아래 4개 구분자를 정확히 사용하세요. 각 섹션 400자 이상. 구분자 외 특수기호 금지.
+
+##사주풀이##
+이 사주의 일간 ${ilgan}(${ilganElem})의 강약, 오행 균형(${elemStr}), 용신을 밝히되, "${itemTitle}" 주제와 직접 연결하여 해석하세요. 이 사주가 왜 이 주제에서 어떤 특성을 보이는지 사주 글자를 근거로 서술하세요.
+
+##핵심분석##
+"${itemTitle}"에 대해 이 사주가 가진 강점과 약점을 구체적으로 풀어주세요. 오행 상생상극과 실제 수치(${elemStr})를 근거로, 이 사람만의 고유한 특징을 짚어주세요. 뻔한 일반론이 아니라 이 사주에서만 나올 수 있는 이야기를 해주세요.
+
+##시기와흐름##
+${thisYear}년 ${yearStem}${yearBranch}년이 이 사주에 미치는 영향과, "${itemTitle}" 관점에서 ${thisYear}~${thisYear+2}년 중 특히 좋은 시기와 주의할 시기를 구체적으로 알려주세요.
+
+##실천조언##
+"${itemTitle}"과 관련하여 이 사주의 용신을 살리는 구체적 행동 지침(방위, 색상, 습관, 주의사항 등)을 제시하고, 따뜻한 격려로 마무리하세요.
+
+[필수] 4섹션 모두 완성. 사주 글자·오행 수치 인용 필수. 끝까지 작성할 것.`;
+
+  const apiBase = window.location.hostname === "localhost" ? "" : "https://toss-saju.vercel.app";
   const resp = await fetch(`${apiBase}/api/claude`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt, system }),
+    body: JSON.stringify({ prompt, system: systemPrompt }),
   });
   if (!resp.ok) {
     const e = await resp.json().catch(() => ({}));
@@ -94,7 +143,7 @@ const streamOnePart = async (apiBase, system, prompt) => {
   }
   const reader = resp.body.getReader();
   const decoder = new TextDecoder();
-  let text = "";
+  let fullText = "";
   try {
     while (true) {
       const { done, value } = await reader.read();
@@ -107,7 +156,7 @@ const streamOnePart = async (apiBase, system, prompt) => {
         try {
           const parsed = JSON.parse(raw);
           if (parsed.type === "content_block_delta" && parsed.delta?.type === "text_delta") {
-            text += parsed.delta.text;
+            fullText += parsed.delta.text;
           }
         } catch { /* 무시 */ }
       }
@@ -115,105 +164,6 @@ const streamOnePart = async (apiBase, system, prompt) => {
   } finally {
     reader.releaseLock();
   }
-  return text;
-};
-
-const callClaude = async (birthInfo, itemTitle, onChunk, itemDesc = "") => {
-  const { year, month, day, gender, ms } = birthInfo;
-  const now = new Date();
-  const thisYear = now.getFullYear();
-  const thisMonth = now.getMonth() + 1;
-  const STEMS_KO = ["갑","을","병","정","무","기","경","신","임","계"];
-  const BRANCHES_KO = ["자","축","인","묘","진","사","오","미","신","유","술","해"];
-  const yearStem = STEMS_KO[((thisYear - 4) % 10 + 10) % 10];
-  const yearBranch = BRANCHES_KO[((thisYear - 4) % 12 + 12) % 12];
-
-  // 오행 분포 계산
-  const GAN_ELEM = ["목","목","화","화","토","토","금","금","수","수"];
-  const JI_ELEM  = ["수","토","목","목","토","화","화","토","금","금","토","수"];
-  const elemCount = { 목:0, 화:0, 토:0, 금:0, 수:0 };
-  [ms.yp.s, ms.mp.s, ms.dp.s, ms.hp.s].forEach(s => { if (s >= 0) elemCount[GAN_ELEM[s % 10]]++; });
-  [ms.yp.b, ms.mp.b, ms.dp.b, ms.hp.b].forEach(b => { if (b >= 0) elemCount[JI_ELEM[b % 12]]++; });
-  const elemStr = Object.entries(elemCount).map(([k,v]) => `${k}(${v})`).join(" ");
-  const ilgan = GAN[ms.dp.s];
-  const ilganElem = GAN_ELEM[ms.dp.s];
-
-  const systemPrompt = `당신은 대한민국 최고 수준의 사주명리학 대가입니다. 40년간 수만 명의 사주를 직접 감정해 온 실전 전문가이며, 고전 명리서(적천수, 자평진전, 궁통보감)에 정통합니다.
-
-## 당신의 전문성
-- 천간·지지의 합충형파해를 정밀하게 분석하고, 십신(비견·겁재·식신·상관·편재·정재·편관·정관·편인·정인)의 배치와 작용을 깊이 있게 해석합니다.
-- 용신·희신·기신·구신을 정확히 판별하고, 대운과 세운의 흐름 속에서 길흉을 구체적으로 제시합니다.
-- 추상적이거나 누구에게나 해당되는 말을 절대 하지 않습니다. 반드시 해당 사주의 구체적인 글자와 오행 수치를 인용하며 논리적으로 설명합니다.
-
-## 문체 규칙
-- 한국어 존댓말(~입니다, ~하십시오)을 사용합니다.
-- 따뜻하지만 권위 있는 어조로, 의뢰인이 "역시 전문가에게 물어보길 잘했다"고 느끼게 합니다.
-- 각 섹션을 충분히 길고 상세하게 작성합니다. 절대 요약하거나 축약하지 마십시오.
-- 모든 섹션을 빠짐없이 완성해야 합니다. 중간에 멈추지 마십시오.`;
-
-  const sajuInfo = `[기준 날짜]
-${thisYear}년 ${thisMonth}월 현재 (${yearStem}${yearBranch}년)
-
-[의뢰인 만세력 사주팔자]
-생년월일: ${birthInfo.inputDate.year}년 ${birthInfo.inputDate.month}월 ${birthInfo.inputDate.day}일 (${birthInfo.calType}) / 양력 ${year}년 ${month}월 ${day}일 / ${gender}
-연주(年柱): ${ms.yp.str} | 월주(月柱): ${ms.mp.str} | 일주(日柱): ${ms.dp.str} | 시주(時柱): ${ms.hp.str}
-일간(日干): ${ilgan}(${ilganElem}) — 이 사람의 본질적 자아
-오행 분포: ${elemStr}
-
-[분석 주제]
-${itemTitle} — ${itemDesc}`;
-
-  // 파트1: 사주구조 + 십신 + 핵심운세
-  const prompt1 = `${sajuInfo}
-
-[작성 지침]
-아래 3개 섹션 구분자를 반드시 그대로 사용하세요. 각 섹션을 풍부하고 상세하게 서술하세요.
-
-##사주구조분석##
-일간 ${ilgan}(${ilganElem})의 강약을 판단하세요: 월지에서 득령 여부, 천간·지지 각 글자의 생극 관계, 오행 분포(${elemStr})의 편중 여부를 상세히 분석하세요. 이를 바탕으로 용신(用神)과 희신(喜神), 기신(忌神)을 명확히 밝히고, 이 사주의 격국(格局)이 무엇인지 판단하세요. 최소 500자 이상 서술하세요.
-
-##십신분석##
-사주 팔자 여덟 글자 각각의 십신(비견·겁재·식신·상관·편재·정재·편관·정관·편인·정인)을 밝히고, 이 십신 배치가 [${itemTitle}] 주제에서 어떤 의미를 갖는지 해석하세요. 특히 일간과 다른 글자들의 관계(생·극·합·충)를 구체적으로 서술하세요. 최소 500자 이상 서술하세요.
-
-##핵심운세풀이##
-[${itemTitle}]에 대해 이 사주의 타고난 강점과 주의해야 할 약점을 오행 상생상극 원리에 근거하여 깊이 있게 풀어주세요. 실제 오행 수치(${elemStr})와 사주 글자를 반드시 인용하며, 왜 그런 결론이 나오는지 논리적 근거를 제시하세요. 최소 500자 이상 서술하세요.
-
-[필수 준수사항]
-- 3개 섹션 구분자(##...##)를 정확히 사용하고, 모든 섹션을 빠짐없이 완성할 것
-- 실제 사주 글자와 오행 수치를 반드시 인용하며 논리적으로 서술할 것
-- 구분자 외 마크다운·특수기호·줄바꿈 구분선 사용 금지
-- 절대 중간에 멈추거나 요약하지 말 것 — 끝까지 완성할 것`;
-
-  // 파트2: 대운세운 + 실천조언 + 종합정리
-  const prompt2 = `${sajuInfo}
-
-[작성 지침]
-아래 3개 섹션 구분자를 반드시 그대로 사용하세요. 각 섹션을 풍부하고 상세하게 서술하세요.
-
-##대운세운분석##
-현재 대운(大運)의 흐름과 ${thisYear}년 ${yearStem}${yearBranch}년 세운(歲運)이 이 사주에 미치는 구체적 영향을 분석하세요. ${yearStem}${yearBranch}의 오행이 사주 원국과 어떻게 작용하는지, 합·충·형이 발생하는지 밝히세요. ${thisYear+1}~${thisYear+3}년까지의 흐름도 연도별로 서술하고, 특히 유리한 시기와 주의할 시기를 월 단위로 구체적으로 제시하세요. 최소 600자 이상 서술하세요.
-
-##실천조언##
-용신을 강화하고 기신을 억제하기 위한 실생활 조언을 구체적으로 제시하세요: 유리한 방위, 색상, 숫자, 직업군, 건강 관리법, 대인관계 전략 등을 포함하세요. 피해야 할 것도 명확히 알려주세요. 따뜻하고 희망적인 마무리 문장으로 끝내세요. 최소 500자 이상 서술하세요.
-
-##종합정리##
-위 분석 전체를 아우르는 핵심 요약을 작성하세요. 이 사주의 가장 큰 장점, 가장 주의할 점, 올해 가장 중요한 행동 지침을 간결하면서도 인상 깊게 정리하세요. 최소 300자 이상 서술하세요.
-
-[필수 준수사항]
-- 3개 섹션 구분자(##...##)를 정확히 사용하고, 모든 섹션을 빠짐없이 완성할 것
-- 실제 사주 글자와 오행 수치를 반드시 인용하며 논리적으로 서술할 것
-- 구분자 외 마크다운·특수기호·줄바꿈 구분선 사용 금지
-- 절대 중간에 멈추거나 요약하지 말 것 — 끝까지 완성할 것`;
-
-  const apiBase = window.location.hostname === "localhost" ? "" : "https://toss-saju.vercel.app";
-
-  // 2개 파트를 병렬로 호출 — 각각 3섹션씩, 타임아웃 걱정 없음
-  const [text1, text2] = await Promise.all([
-    streamOnePart(apiBase, systemPrompt, prompt1),
-    streamOnePart(apiBase, systemPrompt, prompt2),
-  ]);
-
-  const fullText = text1.trim() + "\n\n" + text2.trim();
   onChunk(fullText);
   return fullText;
 };
@@ -367,12 +317,10 @@ function Particles() {
 
 // ====== 프리미엄 분석 섹션 파서 / 렌더러 ======
 const AI_SECTIONS = [
-  { key: "##사주구조분석##", title: "사주 구조 분석",     icon: "🔮", color: "#7B61FF" },
-  { key: "##십신분석##",     title: "십신 심층 분석",     icon: "🎭", color: "#E85D75" },
-  { key: "##핵심운세풀이##", title: "핵심 운세 풀이",     icon: "✨", color: "#D4A853" },
-  { key: "##대운세운분석##", title: "대운·세운 시기 분석", icon: "📅", color: "#3182F6" },
-  { key: "##실천조언##",     title: "실천 조언",          icon: "💡", color: "#00C98D" },
-  { key: "##종합정리##",     title: "종합 정리",          icon: "📋", color: "#6B7684" },
+  { key: "##사주풀이##",   title: "사주 풀이",     icon: "🔮", color: "#7B61FF" },
+  { key: "##핵심분석##",   title: "핵심 분석",     icon: "✨", color: "#D4A853" },
+  { key: "##시기와흐름##", title: "시기와 흐름",   icon: "📅", color: "#3182F6" },
+  { key: "##실천조언##",   title: "실천 조언",     icon: "💡", color: "#00C98D" },
 ];
 
 function parseAiSections(text) {
