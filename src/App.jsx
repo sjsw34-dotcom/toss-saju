@@ -191,17 +191,17 @@ const genFortune = (y, m, d, lunarY) => {
 };
 
 const premiumItems = [
-  { icon: "🔥", title: "2026 신년 사주", origPrice: "21,900원", price: "4,400원", discount: "80%", desc: "올해의 대운과 세운을 총망라한 신년 특별 분석", featured: true, sku: "saju_yearly_2026" },
+  { icon: "🔥", title: "2026 신년 사주", origPrice: "21,900원", price: "4,400원", discount: "80%", desc: "올해의 대운과 세운을 총망라한 신년 특별 분석", featured: true, sku: "ait.0000020917.a3f15fe4.3e253fd54b.2627470992" },
   { icon: "💰", title: "내 말년 운세, 돈 걱정 없이 편안할까?", price: "2,750원", desc: "노후 재물운과 재테크 방향 분석", sku: "ait.0000020917.0f6f4430.e94987cfaf.2627621920" },
-  { icon: "💪", title: "갱년기와 중년 건강, 어디를 조심할까?", price: "2,750원", desc: "건강 취약 시기와 관리 포인트", sku: "saju_health_midlife" },
-  { icon: "🍀", title: "나에게도 횡재수가 있을까? 로또/투자", price: "2,750원", desc: "금전 행운의 시기와 투자 적기", sku: "saju_windfall" },
-  { icon: "🛡️", title: "올해 피해야 할 삼재와 액운은?", price: "2,750원", desc: "주의할 시기와 액막이 방법", sku: "saju_samjae" },
-  { icon: "⭐", title: "내 인생의 황금기, 아직 남았을까?", price: "2,750원", desc: "대운 흐름으로 보는 인생 전환점", sku: "saju_peaklife" },
-  { icon: "🏖️", title: "은퇴 후 삶, 어떻게 보내면 좋을까?", price: "2,750원", desc: "은퇴 시기와 노후 생활 방향", sku: "saju_retirement" },
-  { icon: "💼", title: "제2의 직업, 나에게 맞을까?", price: "2,750원", desc: "전직/부업 적성과 시기 분석", sku: "saju_career2" },
-  { icon: "👨‍👩‍👧‍👦", title: "가족 간 갈등, 언제쯤 풀릴까?", price: "2,750원", desc: "가족 관계 개선 시기와 방향", sku: "saju_family" },
-  { icon: "🏪", title: "소소하게 가게라도 해볼까? 창업운", price: "2,750원", desc: "창업 적성, 시기, 업종 분석", sku: "saju_business" },
-  { icon: "🏠", title: "이사/매매, 지금 움직여도 될까요?", price: "2,750원", desc: "이사 방위와 부동산 매매 시기", sku: "saju_realestate" },
+  { icon: "💪", title: "갱년기와 중년 건강, 어디를 조심할까?", price: "2,750원", desc: "건강 취약 시기와 관리 포인트", sku: "ait.0000020917.b23508e7.82e340944c.2633191458" },
+  { icon: "🍀", title: "나에게도 횡재수가 있을까? 로또/투자", price: "2,750원", desc: "금전 행운의 시기와 투자 적기", sku: "ait.0000020917.3bb5f86a.5c0e258496.2633244480" },
+  { icon: "🛡️", title: "올해 피해야 할 삼재와 액운은?", price: "2,750원", desc: "주의할 시기와 액막이 방법", sku: "ait.0000020917.2516e5b1.1d83f38554.2633297942" },
+  { icon: "⭐", title: "내 인생의 황금기, 아직 남았을까?", price: "2,750원", desc: "대운 흐름으로 보는 인생 전환점", sku: "ait.0000020917.c9d6bc84.40d06d84fd.2633353860" },
+  { icon: "🏖️", title: "은퇴 후 삶, 어떻게 보내면 좋을까?", price: "2,750원", desc: "은퇴 시기와 노후 생활 방향", sku: "ait.0000020917.d1de695b.f7c1b7a525.2633401488" },
+  { icon: "💼", title: "제2의 직업, 나에게 맞을까?", price: "2,750원", desc: "전직/부업 적성과 시기 분석", sku: "ait.0000020917.9e1790a2.b572eac3b9.2633458527" },
+  { icon: "👨‍👩‍👧‍👦", title: "가족 간 갈등, 언제쯤 풀릴까?", price: "2,750원", desc: "가족 관계 개선 시기와 방향", sku: "ait.0000020917.b59843ec.817346ede9.2633492869" },
+  { icon: "🏪", title: "소소하게 가게라도 해볼까? 창업운", price: "2,750원", desc: "창업 적성, 시기, 업종 분석", sku: "ait.0000020917.7063555b.b914aa3299.2633542009" },
+  { icon: "🏠", title: "이사/매매, 지금 움직여도 될까요?", price: "2,750원", desc: "이사 방위와 부동산 매매 시기", sku: "ait.0000020917.b6ba61b6.4992d9936f.2633579053" },
 ];
 
 // 그라데이션 특수 버튼 (TDS Button이 지원하지 않는 금색·보라색 그라데이션용)
