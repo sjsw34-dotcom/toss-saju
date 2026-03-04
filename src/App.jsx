@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button, ProgressBar, TextField } from "@toss/tds-mobile";
 import { IAP, share, getTossShareLink } from "@apps-in-toss/web-framework";
+import KoreanLunarCalendar from "korean-lunar-calendar";
 
 const C = {
   blue: "#3182F6", dark: "#191F28", gray: "#8B95A1", lightGray: "#F2F4F6",
@@ -96,7 +97,9 @@ const callClaude = async (birthInfo, itemTitle, onChunk) => {
 ${thisYear}년 ${thisMonth}월 (${yearStem}${yearBranch}년)
 
 [의뢰인 사주]
-• 생년월일: ${year}년 ${month}월 ${day}일 (${birthInfo.calType}), ${gender}
+• 입력 생년월일: ${birthInfo.inputDate.year}년 ${birthInfo.inputDate.month}월 ${birthInfo.inputDate.day}일 (${birthInfo.calType}${birthInfo.calType === "윤달" ? " - 윤달 적용" : ""})
+• 양력 환산일: ${year}년 ${month}월 ${day}일
+• 성별: ${gender}
 • 연주(年柱): ${ms.yp.str}년
 • 월주(月柱): ${ms.mp.str}월
 • 일주(日柱): ${ms.dp.str}일
@@ -577,9 +580,18 @@ export default function App() {
       setLoadPct((p) => {
         if (p >= 100) {
           clearInterval(t);
-          const y = parseInt(year), m = parseInt(month), d = parseInt(day);
+          let y = parseInt(year), m = parseInt(month), d = parseInt(day);
+          const inputDate = { year: y, month: m, day: d };
+          if (calType !== "양력") {
+            try {
+              const cal = new KoreanLunarCalendar();
+              cal.setLunarDate(y, m, d, calType === "윤달");
+              const solar = cal.getSolarCalendar();
+              y = solar.year; m = solar.month; d = solar.day;
+            } catch {}
+          }
           const lunarY = getLunarYear(y, m, d);
-          setResult({ year: y, month: m, day: d, element: getElement(lunarY), animal: getAnimal(lunarY), fortune: genFortune(y, m, d, lunarY) });
+          setResult({ year: y, month: m, day: d, inputDate, calType, element: getElement(lunarY), animal: getAnimal(lunarY), fortune: genFortune(y, m, d, lunarY) });
           setTimeout(() => setScreen(S.RESULT), 400);
           return 100;
         }
@@ -621,7 +633,7 @@ export default function App() {
       let finalText = "";
       try {
         await callClaude(
-          { year: y, month: m, day: d, gender, ms, calType },
+          { year: y, month: m, day: d, gender, ms, calType: result.calType || "양력", inputDate: result.inputDate || { year: y, month: m, day: d } },
           item.title,
           (partial) => { finalText = partial; setAiResult(prev => ({ ...prev, text: partial })); }
         );
