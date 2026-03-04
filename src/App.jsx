@@ -141,30 +141,12 @@ ${thisYear}년 ${yearStem}${yearBranch}년 세운이 이 사주에 미치는 영
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ prompt }),
   });
+  const data = await resp.json().catch(() => ({}));
   if (!resp.ok) {
-    const e = await resp.json().catch(() => ({}));
-    throw new Error(e.error?.message || `오류 (${resp.status})`);
+    throw new Error(data.error || `오류 (${resp.status})`);
   }
-  const reader = resp.body.getReader();
-  const decoder = new TextDecoder();
-  let fullText = "";
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    const lines = decoder.decode(value, { stream: true }).split("\n");
-    for (const line of lines) {
-      if (!line.startsWith("data: ")) continue;
-      const raw = line.slice(6).trim();
-      if (!raw || raw === "[DONE]") continue;
-      try {
-        const parsed = JSON.parse(raw);
-        if (parsed.type === "content_block_delta" && parsed.delta?.type === "text_delta") {
-          fullText += parsed.delta.text;
-          onChunk(fullText);
-        }
-      } catch { /* JSON 파싱 오류 무시 */ }
-    }
-  }
+  const fullText = data.text ?? "";
+  onChunk(fullText);
   return fullText;
 };
 
