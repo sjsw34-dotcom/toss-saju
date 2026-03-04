@@ -709,7 +709,7 @@ export default function App() {
   };
 
   const canSubmit = year.length === 4 && month && day && gender;
-  const wrap = { maxWidth: 440, margin: "0 auto", minHeight: "100vh", background: C.bg, fontFamily: "'Pretendard', -apple-system, sans-serif", color: C.dark, position: "relative", left: "50%", transform: "translateX(-50%)" };
+  const wrap = { maxWidth: 440, margin: "0 auto", minHeight: "100vh", background: C.bg, fontFamily: "'Pretendard', -apple-system, sans-serif", color: C.dark };
 
   const timeSlots = ["자시 (23:30~01:30)","축시 (01:30~03:30)","인시 (03:30~05:30)","묘시 (05:30~07:30)","진시 (07:30~09:30)","사시 (09:30~11:30)","오시 (11:30~13:30)","미시 (13:30~15:30)","신시 (15:30~17:30)","유시 (17:30~19:30)","술시 (19:30~21:30)","해시 (21:30~23:30)"];
 
