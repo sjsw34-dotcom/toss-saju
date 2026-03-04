@@ -754,7 +754,7 @@ export default function App() {
   if (screen === S.INPUT) {
     return (
       <div style={wrap}>
-        <Header title="사주 정보 입력" onBack={() => setScreen(S.ONBOARD)} />
+        <Header title="사주 정보 입력" onBack={() => setScreen(registered ? S.RESULT : S.ONBOARD)} />
         <div style={{ padding: "28px 20px" }}>
           <Card>
             <div style={{ textAlign: "center", marginBottom: 24 }}>
@@ -958,10 +958,10 @@ export default function App() {
             <Card style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>
               <div style={{ width: 48, height: 48, borderRadius: 14, background: `${el.color}18`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26 }}>{ae}</div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 16, fontWeight: 700 }}>{result.year}.{String(result.month).padStart(2, '0')}.{String(result.day).padStart(2, '0')} (양력)</div>
+                <div style={{ fontSize: 16, fontWeight: 700 }}>{result.year}.{String(result.month).padStart(2, '0')}.{String(result.day).padStart(2, '0')} ({result.calType || "양력"})</div>
                 <div style={{ fontSize: 13, color: C.gray, marginTop: 2 }}>{result.animal}띠 · {el.name}</div>
               </div>
-              <span style={{ fontSize: 18, opacity: 0.3, cursor: "pointer" }}>🗑️</span>
+              <span onClick={() => setScreen(S.INPUT)} style={{ fontSize: 13, color: C.purple, fontWeight: 700, cursor: "pointer", padding: "6px 12px", background: `${C.purple}10`, borderRadius: 8 }}>수정</span>
             </Card>
             <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 12 }}>가족 사주</div>
             <div style={{ border: `2px dashed ${C.blue}30`, borderRadius: 16, padding: 20, textAlign: "center", marginBottom: 24, cursor: "pointer" }}>
