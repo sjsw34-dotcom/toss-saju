@@ -605,7 +605,7 @@ export default function App() {
           }
           const lunarY = getLunarYear(y, m, d);
           setResult({ year: y, month: m, day: d, inputDate, calType, element: getElement(lunarY), animal: getAnimal(lunarY), fortune: genFortune(y, m, d, lunarY) });
-          setTimeout(() => setScreen(S.RESULT), 400);
+          setTimeout(() => navigate(S.RESULT, "saju"), 400);
           return 100;
         }
         return p + Math.random() * 8 + 4;
@@ -614,7 +614,35 @@ export default function App() {
     return () => clearInterval(t);
   }, [screen]);
 
+  // ── 히스토리 기반 네비게이션 (토스 네이티브 뒤로가기 지원) ──
+  const navigate = (newScreen, newTab = "saju", extra = {}) => {
+    window.history.pushState({ screen: newScreen, tab: newTab, ...extra }, "");
+    setScreen(newScreen);
+    setTab(newTab);
+    if (extra.detailId !== undefined) setDetailId(extra.detailId);
+    if (extra.aiResult !== undefined) setAiResult(extra.aiResult);
+  };
+
+  useEffect(() => {
+    // 초기 히스토리 엔트리 (앱 종료 방지용 더미)
+    window.history.replaceState({ screen: S.ONBOARD, tab: "saju" }, "");
+
+    const onPopState = (e) => {
+      const st = e.state;
+      if (!st) return;
+      setScreen(st.screen ?? S.ONBOARD);
+      setTab(st.tab ?? "saju");
+      if (st.detailId !== undefined) setDetailId(st.detailId ?? null);
+      setAiResult(null);
+      setDetailId(null);
+      setTimeDetailId(null);
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
   const handleTabChange = (id) => {
+    window.history.pushState({ screen: S.RESULT, tab: id }, "");
     setTab(id);
     if (id === "saju") setDetailId(null);
     setTimeDetailId(null);
@@ -755,7 +783,7 @@ export default function App() {
           </div>
           <div style={{ padding: "32px 0 40px", zIndex: 1 }}>
             <GradientBtn
-              onClick={() => setScreen(registered ? S.RESULT : S.INPUT)}
+              onClick={() => navigate(registered ? S.RESULT : S.INPUT, "saju")}
               gradient={`linear-gradient(135deg, ${C.gold}, #B8860B)`}
               style={{ borderRadius: 16, fontSize: 18, padding: "18px 0" }}
             >
@@ -779,7 +807,7 @@ export default function App() {
   if (screen === S.INPUT) {
     return (
       <div style={wrap}>
-        <Header title="사주 정보 입력" onBack={() => setScreen(registered ? S.RESULT : S.ONBOARD)} />
+        <Header title="사주 정보 입력" onBack={() => navigate(registered ? S.RESULT : S.ONBOARD, "saju")} />
         <div style={{ padding: "28px 20px" }}>
           <Card>
             <div style={{ textAlign: "center", marginBottom: 24 }}>
@@ -828,7 +856,7 @@ export default function App() {
               display="full"
               size="xlarge"
               disabled={!canSubmit}
-              onClick={canSubmit ? () => { setRegistered(true); setScreen(S.LOADING); } : undefined}
+              onClick={canSubmit ? () => { setRegistered(true); navigate(S.LOADING, "saju"); } : undefined}
             >
               사주 분석 시작하기
             </Button>
@@ -986,7 +1014,7 @@ export default function App() {
                 <div style={{ fontSize: 16, fontWeight: 700 }}>{result.year}.{String(result.month).padStart(2, '0')}.{String(result.day).padStart(2, '0')} ({result.calType || "양력"})</div>
                 <div style={{ fontSize: 13, color: C.gray, marginTop: 2 }}>{result.animal}띠 · {el.name}</div>
               </div>
-              <span onClick={() => setScreen(S.INPUT)} style={{ fontSize: 13, color: C.purple, fontWeight: 700, cursor: "pointer", padding: "6px 12px", background: `${C.purple}10`, borderRadius: 8 }}>수정</span>
+              <span onClick={() => navigate(S.INPUT, "saju")} style={{ fontSize: 13, color: C.purple, fontWeight: 700, cursor: "pointer", padding: "6px 12px", background: `${C.purple}10`, borderRadius: 8 }}>수정</span>
             </Card>
             <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 12 }}>가족 사주</div>
             <div style={{ border: `2px dashed ${C.blue}30`, borderRadius: 16, padding: 20, textAlign: "center", marginBottom: 24, cursor: "pointer" }}>
@@ -1109,7 +1137,7 @@ export default function App() {
             {toast}
           </div>
         )}
-        <Header title="운명테라피 사주" onBack={() => setScreen(S.ONBOARD)} devMode={devMode} onTitleTap={() => {
+        <Header title="운명테라피 사주" onBack={() => navigate(S.ONBOARD, "saju")} devMode={devMode} onTitleTap={() => {
           const ref = devTapRef.current;
           ref.count += 1;
           clearTimeout(ref.timer);
