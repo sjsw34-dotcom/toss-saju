@@ -883,10 +883,16 @@ export default function App() {
                 {aiResult.text && !aiResult.loading && (
                   <AnalysisSections text={aiResult.text} loading={false} />
                 )}
-                {!aiResult.loading && !aiResult.error && (
-                  <div style={{ marginTop: 28 }}>
+                {!aiResult.loading && !aiResult.error && aiResult.text && (
+                  <div style={{ marginTop: 28, display: "flex", gap: 10 }}>
+                    <button onClick={() => {
+                        navigator.clipboard.writeText(aiResult.text).catch(() => {});
+                      }}
+                      style={{ flex: 1, padding: "16px 0", borderRadius: 14, border: "none", background: C.lightGray, color: C.dark, fontSize: 16, fontWeight: 700, cursor: "pointer" }}>
+                      📋 복사
+                    </button>
                     <button onClick={() => setAiResult(null)}
-                      style={{ width: "100%", padding: "16px 0", borderRadius: 14, border: "none", background: C.lightGray, color: C.dark, fontSize: 16, fontWeight: 700, cursor: "pointer" }}>
+                      style={{ flex: 1, padding: "16px 0", borderRadius: 14, border: "none", background: C.lightGray, color: C.dark, fontSize: 16, fontWeight: 700, cursor: "pointer" }}>
                       닫기
                     </button>
                   </div>
