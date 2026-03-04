@@ -179,7 +179,7 @@ const genFortune = (y, m, d, lunarY) => {
 
 const premiumItems = [
   { icon: "🔥", title: "2026 신년 사주", origPrice: "21,900원", price: "4,900원", discount: "80%", desc: "올해의 대운과 세운을 총망라한 신년 특별 분석", featured: true, sku: "saju_yearly_2026" },
-  { icon: "💰", title: "내 말년 운세, 돈 걱정 없이 편안할까?", price: "2,900원", desc: "노후 재물운과 재테크 방향 분석", sku: "saju_lateyear" },
+  { icon: "💰", title: "내 말년 운세, 돈 걱정 없이 편안할까?", price: "2,900원", desc: "노후 재물운과 재테크 방향 분석", sku: "ait.0000020917.0f6f4430.e94987cfaf.2627621920" },
   { icon: "💪", title: "갱년기와 중년 건강, 어디를 조심할까?", price: "2,900원", desc: "건강 취약 시기와 관리 포인트", sku: "saju_health_midlife" },
   { icon: "🍀", title: "나에게도 횡재수가 있을까? 로또/투자", price: "2,900원", desc: "금전 행운의 시기와 투자 적기", sku: "saju_windfall" },
   { icon: "🛡️", title: "올해 피해야 할 삼재와 액운은?", price: "2,900원", desc: "주의할 시기와 액막이 방법", sku: "saju_samjae" },
