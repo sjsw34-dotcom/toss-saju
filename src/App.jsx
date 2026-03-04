@@ -81,7 +81,43 @@ const calcManseok = (year, month, day, hourStr, lunarY) => {
   return { yp, mp, dp, hp };
 };
 
-// ====== Claude API 스트리밍 호출 ======
+// ====== Claude API 스트리밍 호출 (2-파트 병렬) ======
+const streamOnePart = async (apiBase, system, prompt) => {
+  const resp = await fetch(`${apiBase}/api/claude`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt, system }),
+  });
+  if (!resp.ok) {
+    const e = await resp.json().catch(() => ({}));
+    throw new Error(e.error || `오류 (${resp.status})`);
+  }
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let text = "";
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const lines = decoder.decode(value, { stream: true }).split("\n");
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        const raw = line.slice(6).trim();
+        if (!raw || raw === "[DONE]") continue;
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed.type === "content_block_delta" && parsed.delta?.type === "text_delta") {
+            text += parsed.delta.text;
+          }
+        } catch { /* 무시 */ }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  return text;
+};
+
 const callClaude = async (birthInfo, itemTitle, onChunk, itemDesc = "") => {
   const { year, month, day, gender, ms } = birthInfo;
   const now = new Date();
@@ -99,7 +135,7 @@ const callClaude = async (birthInfo, itemTitle, onChunk, itemDesc = "") => {
   [ms.yp.s, ms.mp.s, ms.dp.s, ms.hp.s].forEach(s => { if (s >= 0) elemCount[GAN_ELEM[s % 10]]++; });
   [ms.yp.b, ms.mp.b, ms.dp.b, ms.hp.b].forEach(b => { if (b >= 0) elemCount[JI_ELEM[b % 12]]++; });
   const elemStr = Object.entries(elemCount).map(([k,v]) => `${k}(${v})`).join(" ");
-  const ilgan = GAN[ms.dp.s]; // 일간(日干) = 나 자신
+  const ilgan = GAN[ms.dp.s];
   const ilganElem = GAN_ELEM[ms.dp.s];
 
   const systemPrompt = `당신은 대한민국 최고 수준의 사주명리학 대가입니다. 40년간 수만 명의 사주를 직접 감정해 온 실전 전문가이며, 고전 명리서(적천수, 자평진전, 궁통보감)에 정통합니다.
@@ -115,7 +151,7 @@ const callClaude = async (birthInfo, itemTitle, onChunk, itemDesc = "") => {
 - 각 섹션을 충분히 길고 상세하게 작성합니다. 절대 요약하거나 축약하지 마십시오.
 - 모든 섹션을 빠짐없이 완성해야 합니다. 중간에 멈추지 마십시오.`;
 
-  const prompt = `[기준 날짜]
+  const sajuInfo = `[기준 날짜]
 ${thisYear}년 ${thisMonth}월 현재 (${yearStem}${yearBranch}년)
 
 [의뢰인 만세력 사주팔자]
@@ -125,10 +161,13 @@ ${thisYear}년 ${thisMonth}월 현재 (${yearStem}${yearBranch}년)
 오행 분포: ${elemStr}
 
 [분석 주제]
-${itemTitle} — ${itemDesc}
+${itemTitle} — ${itemDesc}`;
+
+  // 파트1: 사주구조 + 십신 + 핵심운세
+  const prompt1 = `${sajuInfo}
 
 [작성 지침]
-아래 6개 섹션 구분자를 반드시 그대로 사용하세요. 각 섹션을 풍부하고 상세하게 서술하세요.
+아래 3개 섹션 구분자를 반드시 그대로 사용하세요. 각 섹션을 풍부하고 상세하게 서술하세요.
 
 ##사주구조분석##
 일간 ${ilgan}(${ilganElem})의 강약을 판단하세요: 월지에서 득령 여부, 천간·지지 각 글자의 생극 관계, 오행 분포(${elemStr})의 편중 여부를 상세히 분석하세요. 이를 바탕으로 용신(用神)과 희신(喜神), 기신(忌神)을 명확히 밝히고, 이 사주의 격국(格局)이 무엇인지 판단하세요. 최소 500자 이상 서술하세요.
@@ -138,6 +177,18 @@ ${itemTitle} — ${itemDesc}
 
 ##핵심운세풀이##
 [${itemTitle}]에 대해 이 사주의 타고난 강점과 주의해야 할 약점을 오행 상생상극 원리에 근거하여 깊이 있게 풀어주세요. 실제 오행 수치(${elemStr})와 사주 글자를 반드시 인용하며, 왜 그런 결론이 나오는지 논리적 근거를 제시하세요. 최소 500자 이상 서술하세요.
+
+[필수 준수사항]
+- 3개 섹션 구분자(##...##)를 정확히 사용하고, 모든 섹션을 빠짐없이 완성할 것
+- 실제 사주 글자와 오행 수치를 반드시 인용하며 논리적으로 서술할 것
+- 구분자 외 마크다운·특수기호·줄바꿈 구분선 사용 금지
+- 절대 중간에 멈추거나 요약하지 말 것 — 끝까지 완성할 것`;
+
+  // 파트2: 대운세운 + 실천조언 + 종합정리
+  const prompt2 = `${sajuInfo}
+
+[작성 지침]
+아래 3개 섹션 구분자를 반드시 그대로 사용하세요. 각 섹션을 풍부하고 상세하게 서술하세요.
 
 ##대운세운분석##
 현재 대운(大運)의 흐름과 ${thisYear}년 ${yearStem}${yearBranch}년 세운(歲運)이 이 사주에 미치는 구체적 영향을 분석하세요. ${yearStem}${yearBranch}의 오행이 사주 원국과 어떻게 작용하는지, 합·충·형이 발생하는지 밝히세요. ${thisYear+1}~${thisYear+3}년까지의 흐름도 연도별로 서술하고, 특히 유리한 시기와 주의할 시기를 월 단위로 구체적으로 제시하세요. 최소 600자 이상 서술하세요.
@@ -149,43 +200,20 @@ ${itemTitle} — ${itemDesc}
 위 분석 전체를 아우르는 핵심 요약을 작성하세요. 이 사주의 가장 큰 장점, 가장 주의할 점, 올해 가장 중요한 행동 지침을 간결하면서도 인상 깊게 정리하세요. 최소 300자 이상 서술하세요.
 
 [필수 준수사항]
-- 6개 섹션 구분자(##...##)를 정확히 사용하고, 모든 섹션을 빠짐없이 완성할 것
+- 3개 섹션 구분자(##...##)를 정확히 사용하고, 모든 섹션을 빠짐없이 완성할 것
 - 실제 사주 글자와 오행 수치를 반드시 인용하며 논리적으로 서술할 것
 - 구분자 외 마크다운·특수기호·줄바꿈 구분선 사용 금지
 - 절대 중간에 멈추거나 요약하지 말 것 — 끝까지 완성할 것`;
+
   const apiBase = window.location.hostname === "localhost" ? "" : "https://toss-saju.vercel.app";
-  const resp = await fetch(`${apiBase}/api/claude`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt, system: systemPrompt }),
-  });
-  if (!resp.ok) {
-    const e = await resp.json().catch(() => ({}));
-    throw new Error(e.error || `오류 (${resp.status})`);
-  }
-  const reader = resp.body.getReader();
-  const decoder = new TextDecoder();
-  let fullText = "";
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      const lines = decoder.decode(value, { stream: true }).split("\n");
-      for (const line of lines) {
-        if (!line.startsWith("data: ")) continue;
-        const raw = line.slice(6).trim();
-        if (!raw || raw === "[DONE]") continue;
-        try {
-          const parsed = JSON.parse(raw);
-          if (parsed.type === "content_block_delta" && parsed.delta?.type === "text_delta") {
-            fullText += parsed.delta.text;
-          }
-        } catch { /* 무시 */ }
-      }
-    }
-  } finally {
-    reader.releaseLock();
-  }
+
+  // 2개 파트를 병렬로 호출 — 각각 3섹션씩, 타임아웃 걱정 없음
+  const [text1, text2] = await Promise.all([
+    streamOnePart(apiBase, systemPrompt, prompt1),
+    streamOnePart(apiBase, systemPrompt, prompt2),
+  ]);
+
+  const fullText = text1.trim() + "\n\n" + text2.trim();
   onChunk(fullText);
   return fullText;
 };
