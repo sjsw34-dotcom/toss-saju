@@ -83,7 +83,17 @@ const calcManseok = (year, month, day, hourStr, lunarY) => {
 // ====== Claude API 스트리밍 호출 ======
 const callClaude = async (birthInfo, itemTitle, onChunk) => {
   const { year, month, day, gender, ms } = birthInfo;
+  const now = new Date();
+  const thisYear = now.getFullYear();
+  const thisMonth = now.getMonth() + 1;
+  const STEMS_KO = ["갑","을","병","정","무","기","경","신","임","계"];
+  const BRANCHES_KO = ["자","축","인","묘","진","사","오","미","신","유","술","해"];
+  const yearStem = STEMS_KO[((thisYear - 4) % 10 + 10) % 10];
+  const yearBranch = BRANCHES_KO[((thisYear - 4) % 12 + 12) % 12];
   const prompt = `당신은 30년 경력의 사주명리학 전문가입니다. 의뢰인의 사주를 아래와 같이 심층 분석해 주세요.
+
+[현재 날짜]
+${thisYear}년 ${thisMonth}월 (${yearStem}${yearBranch}년)
 
 [의뢰인 사주]
 • 양력 생년월일: ${year}년 ${month}월 ${day}일, ${gender}
@@ -105,7 +115,7 @@ ${itemTitle}
 분석 항목에 대해 오행 상생상극 이론을 바탕으로 강점과 약점을 300자 이상 설명하세요.
 
 ##시기분석##
-올해(2026년 병오년)와 향후 3년간(2027~2028년)의 대운·세운을 분석하여 유리한 월과 주의할 시기를 300자 이상 서술하세요.
+올해(${thisYear}년 ${yearStem}${yearBranch}년)와 향후 3년간(${thisYear+1}~${thisYear+2}년)의 대운·세운을 분석하여 유리한 월과 주의할 시기를 300자 이상 서술하세요.
 
 ##실천조언##
 분석 항목과 관련하여 구체적인 행동 방향, 피해야 할 것, 활용해야 할 것을 300자 이상 제시하세요.
