@@ -82,7 +82,7 @@ const calcManseok = (year, month, day, hourStr, lunarY) => {
 };
 
 // ====== Claude API 스트리밍 호출 ======
-const callClaude = async (birthInfo, itemTitle, onChunk) => {
+const callClaude = async (birthInfo, itemTitle, onChunk, itemDesc = "") => {
   const { year, month, day, gender, ms } = birthInfo;
   const now = new Date();
   const thisYear = now.getFullYear();
@@ -106,7 +106,8 @@ ${thisYear}년 ${thisMonth}월 (${yearStem}${yearBranch}년)
 • 시주(時柱): ${ms.hp.str}
 
 [분석 항목]
-${itemTitle}
+• 주제: ${itemTitle}
+• 핵심 질문: ${itemDesc}
 
 [작성 형식 - 반드시 준수]
 아래 4개의 구분자를 정확히 그대로 사용하여 각 섹션을 구분하세요. 구분자 외 다른 제목이나 기호는 사용하지 마세요.
@@ -635,7 +636,8 @@ export default function App() {
         await callClaude(
           { year: y, month: m, day: d, gender, ms, calType: result.calType || "양력", inputDate: result.inputDate || { year: y, month: m, day: d } },
           item.title,
-          (partial) => { finalText = partial; setAiResult(prev => ({ ...prev, text: partial })); }
+          (partial) => { finalText = partial; setAiResult(prev => ({ ...prev, text: partial })); },
+          item.desc
         );
         setAiResult(prev => ({ ...prev, loading: false }));
       } catch (e) {
