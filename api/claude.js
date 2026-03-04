@@ -32,7 +32,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: "claude-sonnet-4-6",
         max_tokens: 4096,
-        stream: false,
+        stream: true,
         messages: [{ role: "user", content: prompt }],
       }),
     });
@@ -44,12 +44,25 @@ export default async function handler(req, res) {
       });
     }
 
-    const data = await response.json();
-    const text = data.content?.[0]?.text ?? "";
-    return res.status(200).json({ text });
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
 
+    const reader = response.body.getReader();
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        res.write(value);
+      }
+    } finally {
+      reader.releaseLock();
+    }
+    res.end();
   } catch (error) {
     console.error("Claude API proxy error:", error);
-    return res.status(500).json({ error: "Internal server error" });
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Internal server error" });
+    }
   }
 }
