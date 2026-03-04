@@ -3,5 +3,8 @@
   "outputDirectory": "dist",
   "rewrites": [
     { "source": "/((?!api/)(?!.*\\.html$).*)", "destination": "/index.html" }
-  ]
+  ],
+  "functions": {
+    "api/claude.js": { "maxDuration": 60 }
+  }
 }

@@ -607,32 +607,47 @@ export default function App() {
       const lunarY = getLunarYear(y, m, d);
       const ms = calcManseok(y, m, d, hour, lunarY);
       setAiResult({ item, text: "", loading: true, error: null });
+      let finalText = "";
       try {
-        let finalText = "";
         await callClaude(
           { year: y, month: m, day: d, gender, ms },
           item.title,
           (partial) => { finalText = partial; setAiResult(prev => ({ ...prev, text: partial })); }
         );
-        localStorage.setItem(storageKey, finalText);
-        setPurchasedResults(prev => ({ ...prev, [storageKey]: finalText }));
         setAiResult(prev => ({ ...prev, loading: false }));
       } catch (e) {
         setAiResult(prev => ({ ...prev, loading: false, error: e.message }));
+      } finally {
+        // 부분 결과라도 저장 (중간에 끊겨도 보존)
+        if (finalText) {
+          localStorage.setItem(storageKey, finalText);
+          setPurchasedResults(prev => ({ ...prev, [storageKey]: finalText }));
+        }
       }
     };
 
     try {
       // 앱인토스 인앱결제 (Toss 앱 환경)
+      let analysisStarted = false;
+      const startAnalysis = () => {
+        if (analysisStarted) return;
+        analysisStarted = true;
+        runAnalysis();
+      };
       const cleanup = IAP.createOneTimePurchaseOrder({
         options: {
           sku: item.sku,
-          processProductGrant: () => true,
+          // 새 IAP 버전(5.231+): purchased 이벤트 후 이 함수가 호출됨
+          processProductGrant: async () => {
+            startAnalysis();
+            return true;
+          },
         },
-        onEvent: async (event) => {
+        onEvent: (event) => {
           cleanup();
+          // 구 IAP 버전: success 이벤트로 옴
           if (event.type === "success") {
-            await runAnalysis();
+            startAnalysis();
           }
         },
         onError: (error) => {
