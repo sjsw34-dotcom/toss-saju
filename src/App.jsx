@@ -96,7 +96,7 @@ const callClaude = async (birthInfo, itemTitle, onChunk) => {
 ${thisYear}년 ${thisMonth}월 (${yearStem}${yearBranch}년)
 
 [의뢰인 사주]
-• 양력 생년월일: ${year}년 ${month}월 ${day}일, ${gender}
+• 생년월일: ${year}년 ${month}월 ${day}일 (${birthInfo.calType}), ${gender}
 • 연주(年柱): ${ms.yp.str}년
 • 월주(月柱): ${ms.mp.str}월
 • 일주(日柱): ${ms.dp.str}일
@@ -551,6 +551,7 @@ const S = { ONBOARD: "onboard", INPUT: "input", LOADING: "loading", AD: "ad", RE
 export default function App() {
   const [screen, setScreen] = useState(S.ONBOARD);
   const [tab, setTab] = useState("saju");
+  const [calType, setCalType] = useState("양력");
   const [year, setYear] = useState("");
   const [month, setMonth] = useState("");
   const [day, setDay] = useState("");
@@ -620,7 +621,7 @@ export default function App() {
       let finalText = "";
       try {
         await callClaude(
-          { year: y, month: m, day: d, gender, ms },
+          { year: y, month: m, day: d, gender, ms, calType },
           item.title,
           (partial) => { finalText = partial; setAiResult(prev => ({ ...prev, text: partial })); }
         );
@@ -749,7 +750,16 @@ export default function App() {
               <p style={{ fontSize: 15, color: C.gray, margin: "16px 0 0", lineHeight: 1.6 }}>정확한 만세력 분석을 위해<br />태어난 날짜와 시간을 입력해 주세요</p>
             </div>
             <div style={{ marginBottom: 16 }}>
-              <Inp label="태어난 해 (양력)" value={year} onChange={setYear} placeholder="1990" maxLen={4} />
+              <div style={{ fontSize: 13, color: C.gray, marginBottom: 8 }}>양력 / 음력 구분</div>
+              <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+                {["양력", "음력", "윤달"].map((t) => (
+                  <button key={t} onClick={() => setCalType(t)}
+                    style={{ flex: 1, padding: "12px 0", borderRadius: 12, border: calType === t ? `2px solid ${C.purple}` : "1px solid #E5E8EB", background: calType === t ? `${C.purple}10` : C.lightGray, color: calType === t ? C.purple : C.gray, fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                    {t}
+                  </button>
+                ))}
+              </div>
+              <Inp label="태어난 해" value={year} onChange={setYear} placeholder="1990" maxLen={4} />
             </div>
             <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
               <Inp label="월" value={month} onChange={setMonth} placeholder="10" maxLen={2} />
