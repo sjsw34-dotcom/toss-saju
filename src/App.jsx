@@ -91,7 +91,7 @@ const callClaude = async (birthInfo, itemTitle, onChunk) => {
   const BRANCHES_KO = ["자","축","인","묘","진","사","오","미","신","유","술","해"];
   const yearStem = STEMS_KO[((thisYear - 4) % 10 + 10) % 10];
   const yearBranch = BRANCHES_KO[((thisYear - 4) % 12 + 12) % 12];
-  const prompt = `당신은 30년 경력의 사주명리학 전문가입니다. 의뢰인의 사주를 아래와 같이 심층 분석해 주세요.
+  const prompt = `당신은 15년 경력의 사주명리학 전문가입니다. 의뢰인의 사주를 아래와 같이 심층 분석해 주세요.
 
 [현재 날짜]
 ${thisYear}년 ${thisMonth}월 (${yearStem}${yearBranch}년)
