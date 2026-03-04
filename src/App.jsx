@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button, ProgressBar, TextField } from "@toss/tds-mobile";
 import { IAP, share, getTossShareLink } from "@apps-in-toss/web-framework";
 import KoreanLunarCalendar from "korean-lunar-calendar";
@@ -481,15 +481,16 @@ function TabBar({ active, onTab }) {
 }
 
 // TDS 검수 기준 준수: 좌(뒤로가기) / 중앙(브랜드 로고+이름) / 우(기능 버튼 최대 1개)
-function Header({ title, onBack }) {
+function Header({ title, onBack, onTitleTap, devMode }) {
   return (
     <div style={{ display: "flex", alignItems: "center", padding: "14px 20px", background: C.white, borderBottom: "1px solid #E8EBED", position: "sticky", top: 0, zIndex: 10 }}>
       {onBack && <span onClick={onBack} style={{ cursor: "pointer", fontSize: 20, marginRight: 12 }}>←</span>}
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <div onClick={onTitleTap} style={{ display: "flex", alignItems: "center", gap: 8, cursor: onTitleTap ? "pointer" : "default" }}>
         <div style={{ width: 28, height: 28, borderRadius: 8, background: `linear-gradient(135deg, ${C.purple}, ${C.gold})`, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <span style={{ fontSize: 14 }}>🔮</span>
         </div>
         <span style={{ fontSize: 17, fontWeight: 700 }}>{title}</span>
+        {devMode && <span style={{ fontSize: 11, color: "#fff", background: C.red, borderRadius: 6, padding: "2px 6px", fontWeight: 700 }}>DEV</span>}
       </div>
       {/* TDS 스펙: 우측 버튼 최대 1개 */}
       <div style={{ marginLeft: "auto" }}>
@@ -572,6 +573,8 @@ export default function App() {
   const [aiResult, setAiResult] = useState(null); // { item, text, loading, error }
   const [purchasedResults, setPurchasedResults] = useState({}); // { [sku]: text }
   const [legalDoc, setLegalDoc] = useState(null); // 'terms' | 'privacy' | null
+  const [devMode, setDevMode] = useState(false); // 개발 테스트 모드 (결제 우회)
+  const devTapRef = useRef({ count: 0, timer: null });
   const [todayDate] = useState(() => {
     const d = new Date();
     return `${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')} (${['일','월','화','수','목','금','토'][d.getDay()]})`;
@@ -653,6 +656,12 @@ export default function App() {
         }
       }
     };
+
+    // 개발 테스트 모드: 결제 없이 바로 분석
+    if (devMode) {
+      runAnalysis();
+      return;
+    }
 
     try {
       // 결제 시작 즉시 로딩 화면 표시 (공백 방지)
@@ -1089,7 +1098,21 @@ export default function App() {
     // --- SAJU MAIN TAB ---
     return (
       <div style={wrap}>
-        <Header title="운명테라피 사주" onBack={() => setScreen(S.ONBOARD)} />
+        <Header title="운명테라피 사주" onBack={() => setScreen(S.ONBOARD)} devMode={devMode} onTitleTap={() => {
+          const ref = devTapRef.current;
+          ref.count += 1;
+          clearTimeout(ref.timer);
+          if (ref.count >= 5) {
+            ref.count = 0;
+            setDevMode(prev => {
+              const next = !prev;
+              alert(next ? "🛠️ 개발 모드 ON — 결제 없이 분석 실행" : "개발 모드 OFF");
+              return next;
+            });
+          } else {
+            ref.timer = setTimeout(() => { ref.count = 0; }, 2000);
+          }
+        }} />
         <div style={{ background: "linear-gradient(180deg, #1A0F3C 0%, #3B1F7E 35%, #8B5CF6 70%, #C084FC 100%)", padding: "20px 20px 36px", position: "relative", overflow: "hidden" }}>
           <Particles />
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 20, position: "relative", zIndex: 1 }}>
