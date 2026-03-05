@@ -91,6 +91,11 @@ const callClaude = async (birthInfo, itemTitle, onChunk, itemDesc = "") => {
   const BRANCHES_KO = ["자","축","인","묘","진","사","오","미","신","유","술","해"];
   const yearStem = STEMS_KO[((thisYear - 4) % 10 + 10) % 10];
   const yearBranch = BRANCHES_KO[((thisYear - 4) % 12 + 12) % 12];
+  // 올해~+2년 간지 미리 계산 (AI 추측 방지)
+  const yearGanJi = [0, 1, 2].map(offset => {
+    const y = thisYear + offset;
+    return `${y}년 ${STEMS_KO[((y - 4) % 10 + 10) % 10]}${BRANCHES_KO[((y - 4) % 12 + 12) % 12]}년`;
+  }).join(", ");
 
   const GAN_ELEM = ["목","목","화","화","토","토","금","금","수","수"];
   const JI_ELEM  = ["수","토","목","목","토","화","화","토","금","금","토","수"];
@@ -101,13 +106,62 @@ const callClaude = async (birthInfo, itemTitle, onChunk, itemDesc = "") => {
   const ilgan = GAN[ms.dp.s];
   const ilganElem = GAN_ELEM[ms.dp.s];
 
+  // 일간 기준 십신 조견표 계산
+  const dpStem = ms.dp.s; // 일간 천간 인덱스
+  const sipsinNames = ["비견","겁재","식신","상관","편재","정재","편관","정관","편인","정인"];
+  const getSipsin = (stemIdx) => sipsinNames[((stemIdx - dpStem) % 10 + 10) % 10];
+  const sipsinTable = {};
+  for (let i = 0; i < 10; i++) sipsinTable[GAN[i]] = getSipsin(i);
+  const sipsinStr = GAN.map(g => `${g}=${sipsinTable[g]}`).join(", ");
+
+  // ── 각 기둥·연도의 십신을 코드로 사전 계산 (AI 판단 불필요하게) ──
+  const labelStem = (idx) => `${GAN[idx]}(${GAN_ELEM[idx]}) → ${getSipsin(idx)}`;
+  const pillarSipsin = [
+    `연주 천간: ${labelStem(ms.yp.s)}`,
+    `월주 천간: ${labelStem(ms.mp.s)}`,
+    `일주 천간: ${labelStem(ms.dp.s)} (본인=일간)`,
+    ms.hp.s >= 0 ? `시주 천간: ${labelStem(ms.hp.s)}` : null,
+  ].filter(Boolean).join("\n");
+
+  // 향후 3년 간지 + 십신
+  const futureYearSipsin = [0, 1, 2].map(offset => {
+    const y = thisYear + offset;
+    const yStemIdx = ((y - 4) % 10 + 10) % 10;
+    const yBranchIdx = ((y - 4) % 12 + 12) % 12;
+    return `${y}년 ${GAN[yStemIdx]}${JI[yBranchIdx]}년 — 천간 ${GAN[yStemIdx]}(${GAN_ELEM[yStemIdx]})은 ${getSipsin(yStemIdx)}, 지지 ${JI[yBranchIdx]}(${JI_ELEM[yBranchIdx]})`;
+  }).join("\n");
+
   const systemPrompt = `당신은 40년 경력의 사주명리학 대가입니다. 적천수, 자평진전, 궁통보감에 정통하며, 의뢰인의 실제 사주 글자와 오행 수치를 반드시 인용하여 구체적으로 분석합니다.
 추상적이거나 누구에게나 해당되는 말은 절대 하지 않습니다. 한국어 존댓말을 사용하고, 따뜻하지만 권위 있는 전문가 어조로 작성합니다.
-반드시 4개 섹션 구분자(##...##)를 모두 사용하고, 각 섹션을 400자 이상 충실히 작성하세요. 절대 중간에 끊거나 요약하지 마세요.`;
+반드시 4개 섹션 구분자(##...##)를 모두 사용하고, 각 섹션을 400자 이상 충실히 작성하세요. 절대 중간에 끊거나 요약하지 마세요.
 
+[오행 상생 — 반드시 이 방향만 사용]
+목생화(木生火), 화생토(火生土), 토생금(土生金), 금생수(金生水), 수생목(水生木)
+
+[오행 상극 — 반드시 이 방향만 사용]
+목극토(木剋土), 토극수(土剋水), 수극화(水剋火), 화극금(火剋金), 금극목(金剋木)
+※ "목극금", "토극목", "수극토" 등 존재하지 않는 관계를 절대 사용하지 마세요.
+
+[십신 조견표 — 일간 ${ilgan} 기준, 반드시 이 표만 사용]
+${sipsinStr}
+※ 위 표에 없는 십신 배정은 절대 하지 마세요.
+
+[이 사주의 각 기둥 십신 — 아래 내용을 그대로 인용하세요]
+${pillarSipsin}
+
+[향후 3년 간지와 십신 — 아래 내용을 그대로 인용하세요]
+${futureYearSipsin}
+
+[절대 금지]
+- 자기 수정 표현 금지: "정정:", "수정:", "다시 말해" 등 AI가 스스로 틀렸다고 고치는 문구를 절대 포함하지 마세요.
+- 괄호 안 메타 설명 금지: "(목생화 아니라...)" 같은 내부 사고 과정을 노출하지 마세요.
+- 처음부터 정확하게 한 번에 서술하세요. 완성된 전문가 보고서처럼 매끄럽게 작성하세요.`;
+
+  const currentAge = thisYear - parseInt(year);
   const prompt = `[만세력 정보]
-${thisYear}년 ${thisMonth}월 (${yearStem}${yearBranch}년)
-생년월일: ${birthInfo.inputDate.year}년 ${birthInfo.inputDate.month}월 ${birthInfo.inputDate.day}일 (${birthInfo.calType}) / 양력 ${year}.${month}.${day} / ${gender}
+현재: ${thisYear}년 ${thisMonth}월 (${yearStem}${yearBranch}년)
+향후 3년 간지: ${yearGanJi}
+생년월일: ${birthInfo.inputDate.year}년 ${birthInfo.inputDate.month}월 ${birthInfo.inputDate.day}일 (${birthInfo.calType}) / 양력 ${year}.${month}.${day} / ${gender} / 현재 만 ${currentAge}세
 연주: ${ms.yp.str} | 월주: ${ms.mp.str} | 일주: ${ms.dp.str} | 시주: ${ms.hp.str}
 일간: ${ilgan}(${ilganElem}) | 오행: ${elemStr}
 
@@ -116,6 +170,9 @@ ${thisYear}년 ${thisMonth}월 (${yearStem}${yearBranch}년)
 
 [작성 규칙]
 아래 4개 구분자를 정확히 사용하세요. 각 섹션 400자 이상. 구분자 외 특수기호 금지.
+연도별 간지는 반드시 위 [만세력 정보]에 명시된 것만 사용하세요. 임의로 추측하지 마세요.
+십신(비겁·식상·재성·관성·인성) 판단 시 일간 ${ilgan}(${ilganElem})을 기준으로 정확히 산출하세요.
+대운(大運)은 [만세력 정보]에 제공되지 않았으므로 언급하지 마세요.
 
 ##사주풀이##
 이 사주의 일간 ${ilgan}(${ilganElem})의 강약, 오행 균형(${elemStr}), 용신을 밝히되, "${itemTitle}" 주제와 직접 연결하여 해석하세요. 이 사주가 왜 이 주제에서 어떤 특성을 보이는지 사주 글자를 근거로 서술하세요.
@@ -124,7 +181,9 @@ ${thisYear}년 ${thisMonth}월 (${yearStem}${yearBranch}년)
 "${itemTitle}"에 대해 이 사주가 가진 강점과 약점을 구체적으로 풀어주세요. 오행 상생상극과 실제 수치(${elemStr})를 근거로, 이 사람만의 고유한 특징을 짚어주세요. 뻔한 일반론이 아니라 이 사주에서만 나올 수 있는 이야기를 해주세요.
 
 ##시기와흐름##
-${thisYear}년 ${yearStem}${yearBranch}년이 이 사주에 미치는 영향과, "${itemTitle}" 관점에서 ${thisYear}~${thisYear+2}년 중 특히 좋은 시기와 주의할 시기를 구체적으로 알려주세요.
+위 [만세력 정보]의 "향후 3년 간지"를 정확히 사용하세요. 각 연도의 천간 십신은 이미 계산되어 있으니 그대로 인용하세요:
+${futureYearSipsin}
+각 연도가 이 사주에 미치는 영향과 "${itemTitle}" 관점에서 좋은 시기·주의할 시기를 구체적으로 알려주세요.
 
 ##실천조언##
 "${itemTitle}"과 관련하여 이 사주의 용신을 살리는 구체적 행동 지침(방위, 색상, 습관, 주의사항 등)을 제시하고, 따뜻한 격려로 마무리하세요.
@@ -188,7 +247,35 @@ ${thisYear}년 ${yearStem}${yearBranch}년이 이 사주에 미치는 영향과,
   } finally {
     reader.releaseLock();
   }
-  onChunk(fullText); // 최종 결과
+  onChunk(fullText); // 스트리밍 최종 결과
+
+  // ── 2차 검증: 오행/십신 오류 자동 교정 ──
+  try {
+    const validateBase = window.location.hostname === "localhost" ? "" : "https://toss-saju.vercel.app";
+    const valResp = await fetch(`${validateBase}/api/validate-saju`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: fullText, ilgan, sipsinTable: sipsinStr, yearGanJi }),
+    });
+    if (valResp.ok) {
+      const valData = await valResp.json();
+      if (valData.hasErrors && valData.corrections?.length > 0) {
+        let corrected = fullText;
+        for (const c of valData.corrections) {
+          if (c.wrong && c.fixed && corrected.includes(c.wrong)) {
+            corrected = corrected.replace(c.wrong, c.fixed);
+          }
+        }
+        if (corrected !== fullText) {
+          fullText = corrected;
+          onChunk(fullText); // 교정된 결과로 UI 업데이트
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("사주 검증 스킵:", e);
+  }
+
   return fullText;
 };
 
@@ -603,12 +690,28 @@ export default function App() {
   const [legalDoc, setLegalDoc] = useState(null); // 'terms' | 'privacy' | null
   const [devMode, setDevMode] = useState(false); // 개발 테스트 모드 (결제 우회)
   const [toast, setToast] = useState(null); // 토스트 메시지
+  const [aiFortune, setAiFortune] = useState(null); // AI 오늘의 운세 캐시 데이터
   const devTapRef = useRef({ count: 0, timer: null });
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2500); };
   const [todayDate] = useState(() => {
     const d = new Date();
     return `${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')} (${['일','월','화','수','목','금','토'][d.getDay()]})`;
   });
+
+  // AI 오늘의 운세 데이터 가져오기 (일간 기반 CDN 캐싱)
+  useEffect(() => {
+    if (!result) return;
+    const f = result.fortune;
+    // 일간 인덱스: hStems 배열에서 myStem 위치 (0~9)
+    const ilganIdx = hStems.indexOf(f.myStem);
+    if (ilganIdx < 0) return;
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    fetch(`/api/daily-fortune?date=${dateStr}&ilgan=${ilganIdx}`)
+      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+      .then(data => setAiFortune(data))
+      .catch(e => console.warn('AI fortune fallback:', e));
+  }, [result]);
 
   useEffect(() => {
     if (screen !== S.LOADING) return;
@@ -919,7 +1022,22 @@ export default function App() {
   // ====== RESULT ======
   if (screen === S.RESULT && result) {
     const el = ojHaeng[result.element];
-    const f = result.fortune;
+    const baseFortune = result.fortune;
+    // AI 데이터가 있으면 scores + luckyItems 머지
+    const f = aiFortune ? {
+      ...baseFortune,
+      total: aiFortune.scores?.total ?? baseFortune.total,
+      wealth: aiFortune.scores?.wealth ?? baseFortune.wealth,
+      love: aiFortune.scores?.love ?? baseFortune.love,
+      health: aiFortune.scores?.health ?? baseFortune.health,
+      work: aiFortune.scores?.work ?? baseFortune.work,
+      luck: aiFortune.scores?.luck ?? baseFortune.luck,
+      summary: aiFortune.summary ?? baseFortune.summary,
+      luckyTime: aiFortune.luckyItems?.luckyTime ?? baseFortune.luckyTime,
+      luckyColor: aiFortune.luckyItems?.luckyColor ?? baseFortune.luckyColor,
+      luckyDir: aiFortune.luckyItems?.luckyDir ?? baseFortune.luckyDir,
+      luckyNums: aiFortune.luckyItems?.luckyNums ?? baseFortune.luckyNums,
+    } : baseFortune;
     const ae = animalEmoji[result.animal] || "🐾";
 
     // --- PREMIUM TAB ---
@@ -1090,13 +1208,14 @@ export default function App() {
       const card = themeMap[detailId] || themeMap.money;
       const scoreMap = { money: f.wealth, love: f.love, health: f.health, work: f.work, luck: f.luck, match: f.love };
       const sc = scoreMap[detailId] || f.total;
+      const aiCat = aiFortune?.categoryTexts;
       const texts = {
-        money: "오늘은 금전적으로 안정적인 흐름이 예상됩니다. 큰 지출보다는 소소한 절약이 장기적으로 유리합니다. 오후 시간대에 재물과 관련된 좋은 소식이 있을 수 있습니다.",
-        love: "감정의 교류가 활발한 날입니다. 짝이 있다면 진솔한 대화가 관계를 깊게 만듭니다. 솔로라면 새로운 만남의 기운이 감지됩니다.",
-        health: "전반적으로 양호한 컨디션입니다. 다만 과로는 피하고 충분한 수면을 취하세요. 가벼운 산책이 기운 순환에 도움됩니다.",
-        work: "업무에서 성과를 낼 수 있는 기운이 있습니다. 동료와의 협업이 특히 빛을 발하는 날이니 소통에 힘쓰세요.",
-        luck: "행운의 기운이 보통 수준입니다. 무리한 도전보다는 꾸준함이 행운을 부릅니다. 소액으로 시도해보는 것이 좋겠습니다.",
-        match: "상대방과의 기운 교류가 활발합니다. 서로의 다름을 인정하면 더욱 깊은 유대가 형성됩니다.",
+        money: aiCat?.money || "오늘은 금전적으로 안정적인 흐름이 예상됩니다. 큰 지출보다는 소소한 절약이 장기적으로 유리합니다. 오후 시간대에 재물과 관련된 좋은 소식이 있을 수 있습니다.",
+        love: aiCat?.love || "감정의 교류가 활발한 날입니다. 짝이 있다면 진솔한 대화가 관계를 깊게 만듭니다. 솔로라면 새로운 만남의 기운이 감지됩니다.",
+        health: aiCat?.health || "전반적으로 양호한 컨디션입니다. 다만 과로는 피하고 충분한 수면을 취하세요. 가벼운 산책이 기운 순환에 도움됩니다.",
+        work: aiCat?.work || "업무에서 성과를 낼 수 있는 기운이 있습니다. 동료와의 협업이 특히 빛을 발하는 날이니 소통에 힘쓰세요.",
+        luck: aiCat?.luck || "행운의 기운이 보통 수준입니다. 무리한 도전보다는 꾸준함이 행운을 부릅니다. 소액으로 시도해보는 것이 좋겠습니다.",
+        match: aiCat?.match || "상대방과의 기운 교류가 활발합니다. 서로의 다름을 인정하면 더욱 깊은 유대가 형성됩니다.",
       };
       return (
         <div style={wrap}>
@@ -1259,26 +1378,27 @@ export default function App() {
 
           {/* 시간대별 분석 내용 */}
           {timeDetailId && (() => {
+            const aiTime = aiFortune?.timeAnalysis;
             const timeTexts = {
               morning: {
                 title: "오전 기운", icon: "☀️",
-                desc: `오전 시간대는 ${f.total > 75 ? "활기찬 기운으로 가득합니다. 중요한 미팅이나 결정을 이 시간대에 잡으면 좋습니다. 집중력이 최고조에 달해 업무 효율이 높아집니다." : "차분하게 하루를 시작하기 좋은 시간입니다. 무리하지 않고 계획을 세우며 준비하는 것이 현명합니다."}`,
-                tips: ["집중이 필요한 업무 처리", "중요한 연락·미팅", "가벼운 스트레칭"],
+                desc: aiTime?.morning?.desc || `오전 시간대는 ${f.total > 75 ? "활기찬 기운으로 가득합니다. 중요한 미팅이나 결정을 이 시간대에 잡으면 좋습니다. 집중력이 최고조에 달해 업무 효율이 높아집니다." : "차분하게 하루를 시작하기 좋은 시간입니다. 무리하지 않고 계획을 세우며 준비하는 것이 현명합니다."}`,
+                tips: aiTime?.morning?.tips || ["집중이 필요한 업무 처리", "중요한 연락·미팅", "가벼운 스트레칭"],
               },
               noon: {
                 title: "한낮 기운", icon: "🌤️",
-                desc: `한낮 시간대는 ${f.work > 75 ? "사회적 관계에서 긍정적인 에너지가 넘칩니다. 협업이나 네트워킹 활동에 최적입니다." : "에너지가 다소 분산되는 시간입니다. 과식을 피하고 가벼운 점심으로 오후를 준비하세요."}`,
-                tips: ["동료·지인과의 소통", "가벼운 점심 식사", "짧은 휴식으로 재충전"],
+                desc: aiTime?.noon?.desc || `한낮 시간대는 ${f.work > 75 ? "사회적 관계에서 긍정적인 에너지가 넘칩니다. 협업이나 네트워킹 활동에 최적입니다." : "에너지가 다소 분산되는 시간입니다. 과식을 피하고 가벼운 점심으로 오후를 준비하세요."}`,
+                tips: aiTime?.noon?.tips || ["동료·지인과의 소통", "가벼운 점심 식사", "짧은 휴식으로 재충전"],
               },
               afternoon: {
                 title: "오후 기운", icon: "🌅",
-                desc: `오후 시간대는 ${f.wealth > 70 ? "재물 기운이 특히 강한 시간입니다. 금전 관련 결정이나 쇼핑, 투자 검토를 이 시간대에 하면 유리합니다." : "창의적인 활동에 좋은 기운이 흐릅니다. 새로운 아이디어를 내거나 취미 활동을 즐겨보세요."}`,
-                tips: ["재물 관련 처리 적기", "창의적 작업", "운동·산책"],
+                desc: aiTime?.afternoon?.desc || `오후 시간대는 ${f.wealth > 70 ? "재물 기운이 특히 강한 시간입니다. 금전 관련 결정이나 쇼핑, 투자 검토를 이 시간대에 하면 유리합니다." : "창의적인 활동에 좋은 기운이 흐릅니다. 새로운 아이디어를 내거나 취미 활동을 즐겨보세요."}`,
+                tips: aiTime?.afternoon?.tips || ["재물 관련 처리 적기", "창의적 작업", "운동·산책"],
               },
               evening: {
                 title: "저녁 기운", icon: "🌙",
-                desc: `저녁 시간대는 ${f.love > 70 ? "감정의 기운이 풍부해 소중한 사람과의 교류에 최적입니다. 가족·연인과 따뜻한 시간을 보내세요." : "하루를 마무리하며 내면을 돌아보기 좋은 시간입니다. 과도한 야식이나 늦은 연락은 피하는 것이 좋습니다."}`,
-                tips: ["가족·연인과 대화", "가벼운 독서·명상", "내일 계획 정리"],
+                desc: aiTime?.evening?.desc || `저녁 시간대는 ${f.love > 70 ? "감정의 기운이 풍부해 소중한 사람과의 교류에 최적입니다. 가족·연인과 따뜻한 시간을 보내세요." : "하루를 마무리하며 내면을 돌아보기 좋은 시간입니다. 과도한 야식이나 늦은 연락은 피하는 것이 좋습니다."}`,
+                tips: aiTime?.evening?.tips || ["가족·연인과 대화", "가벼운 독서·명상", "내일 계획 정리"],
               },
             };
             const tw = timeTexts[timeDetailId];
