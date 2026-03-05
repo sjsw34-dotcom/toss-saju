@@ -106,10 +106,17 @@ const callClaude = async (birthInfo, itemTitle, onChunk, itemDesc = "") => {
   const ilgan = GAN[ms.dp.s];
   const ilganElem = GAN_ELEM[ms.dp.s];
 
-  // 일간 기준 십신 조견표 계산
+  // 일간 기준 십신 조견표 계산 (오행 관계 + 음양 기반 정확한 공식)
   const dpStem = ms.dp.s; // 일간 천간 인덱스
   const sipsinNames = ["비견","겁재","식신","상관","편재","정재","편관","정관","편인","정인"];
-  const getSipsin = (stemIdx) => sipsinNames[((stemIdx - dpStem) % 10 + 10) % 10];
+  const getSipsin = (stemIdx) => {
+    const ilganElemIdx = Math.floor(dpStem / 2); // 0=목,1=화,2=토,3=금,4=수
+    const targetElemIdx = Math.floor(stemIdx / 2);
+    // 0=동일, 1=내가생(식상), 2=내가극(재성), 3=나를극(관성), 4=나를생(인성)
+    const elemDiff = ((targetElemIdx - ilganElemIdx) % 5 + 5) % 5;
+    const samePol = (stemIdx % 2) === (dpStem % 2); // 같은 음양이면 편, 다르면 정
+    return sipsinNames[elemDiff * 2 + (samePol ? 0 : 1)];
+  };
   const sipsinTable = {};
   for (let i = 0; i < 10; i++) sipsinTable[GAN[i]] = getSipsin(i);
   const sipsinStr = GAN.map(g => `${g}=${sipsinTable[g]}`).join(", ");
@@ -155,7 +162,8 @@ ${futureYearSipsin}
 [절대 금지]
 - 자기 수정 표현 금지: "정정:", "수정:", "다시 말해" 등 AI가 스스로 틀렸다고 고치는 문구를 절대 포함하지 마세요.
 - 괄호 안 메타 설명 금지: "(목생화 아니라...)" 같은 내부 사고 과정을 노출하지 마세요.
-- 처음부터 정확하게 한 번에 서술하세요. 완성된 전문가 보고서처럼 매끄럽게 작성하세요.`;
+- 처음부터 정확하게 한 번에 서술하세요. 완성된 전문가 보고서처럼 매끄럽게 작성하세요.
+- 마크다운 서식 금지: *, **, #, -, ` 등 마크다운 기호를 절대 사용하지 마세요. 순수 텍스트로만 작성하세요.`;
 
   const currentAge = thisYear - parseInt(year);
   const prompt = `[만세력 정보]
