@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Button, ProgressBar, TextField } from "@toss/tds-mobile";
-import { IAP, share, getTossShareLink } from "@apps-in-toss/web-framework";
+import { IAP, share, getTossShareLink, graniteEvent, closeView } from "@apps-in-toss/web-framework";
 import KoreanLunarCalendar from "korean-lunar-calendar";
 
 const C = {
@@ -585,6 +585,7 @@ function LegalModal({ docKey, onClose }) {
   );
 }
 
+// 플로팅 탭바 — 토스 미니앱 브랜딩 가이드 준수
 function TabBar({ active, onTab }) {
   const tabs = [
     { id: "saju", icon: "🔮", label: "사주" },
@@ -592,33 +593,33 @@ function TabBar({ active, onTab }) {
     { id: "my", icon: "👤", label: "내정보" },
   ];
   return (
-    <div style={{ position: "sticky", bottom: 0, background: C.white, borderTop: "1px solid #E8EBED", display: "flex", padding: "8px 0 12px", zIndex: 50 }}>
+    <div style={{
+      position: "fixed",
+      bottom: "calc(16px + env(safe-area-inset-bottom, 0px))",
+      left: "50%",
+      transform: "translateX(-50%)",
+      background: "rgba(255,255,255,0.96)",
+      backdropFilter: "blur(20px)",
+      WebkitBackdropFilter: "blur(20px)",
+      borderRadius: 100,
+      display: "flex",
+      padding: "6px",
+      boxShadow: "0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08)",
+      zIndex: 50,
+      width: "calc(100% - 48px)",
+      maxWidth: 392,
+    }}>
       {tabs.map((t) => (
-        <div key={t.id} onClick={() => onTab(t.id)} style={{ flex: 1, textAlign: "center", cursor: "pointer" }}>
-          <div style={{ fontSize: 22, opacity: active === t.id ? 1 : 0.35 }}>{t.icon}</div>
-          <div style={{ fontSize: 11, fontWeight: active === t.id ? 700 : 500, marginTop: 2, color: active === t.id ? C.dark : C.gray }}>{t.label}</div>
+        <div key={t.id} onClick={() => onTab(t.id)} style={{
+          flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
+          cursor: "pointer", padding: "8px 0", borderRadius: 80,
+          background: active === t.id ? `${C.purple}15` : "transparent",
+          transition: "background 0.2s",
+        }}>
+          <div style={{ fontSize: 22, opacity: active === t.id ? 1 : 0.4 }}>{t.icon}</div>
+          <div style={{ fontSize: 11, fontWeight: active === t.id ? 700 : 500, marginTop: 2, color: active === t.id ? C.purple : C.gray }}>{t.label}</div>
         </div>
       ))}
-    </div>
-  );
-}
-
-// TDS 검수 기준 준수: 좌(뒤로가기) / 중앙(브랜드 로고+이름) / 우(기능 버튼 최대 1개)
-function Header({ title, onBack, onTitleTap, devMode }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", padding: "14px 20px", background: C.white, borderBottom: "1px solid #E8EBED", position: "sticky", top: 0, zIndex: 10 }}>
-      {onBack && <span onClick={onBack} style={{ cursor: "pointer", fontSize: 20, marginRight: 12 }}>←</span>}
-      <div onClick={onTitleTap} style={{ display: "flex", alignItems: "center", gap: 8, cursor: onTitleTap ? "pointer" : "default" }}>
-        <div style={{ width: 28, height: 28, borderRadius: 8, background: `linear-gradient(135deg, ${C.purple}, ${C.gold})`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <span style={{ fontSize: 14 }}>🔮</span>
-        </div>
-        <span style={{ fontSize: 17, fontWeight: 700 }}>{title}</span>
-        {devMode && <span style={{ fontSize: 11, color: "#fff", background: C.red, borderRadius: 6, padding: "2px 6px", fontWeight: 700 }}>DEV</span>}
-      </div>
-      {/* TDS 스펙: 우측 버튼 최대 1개 */}
-      <div style={{ marginLeft: "auto" }}>
-        <span style={{ fontSize: 16, cursor: "pointer", opacity: 0.5 }}>✕</span>
-      </div>
     </div>
   );
 }
@@ -696,10 +697,12 @@ export default function App() {
   const [aiResult, setAiResult] = useState(null); // { item, text, loading, error }
   const [purchasedResults, setPurchasedResults] = useState({}); // { [sku]: text }
   const [legalDoc, setLegalDoc] = useState(null); // 'terms' | 'privacy' | null
-  const [devMode, setDevMode] = useState(false); // 개발 테스트 모드 (결제 우회)
   const [toast, setToast] = useState(null); // 토스트 메시지
   const [aiFortune, setAiFortune] = useState(null); // AI 오늘의 운세 캐시 데이터
-  const devTapRef = useRef({ count: 0, timer: null });
+  const legalDocRef = useRef(legalDoc);
+  const aiResultRef = useRef(null);
+  useEffect(() => { legalDocRef.current = legalDoc; }, [legalDoc]);
+  useEffect(() => { aiResultRef.current = aiResult; }, [aiResult]);
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2500); };
   const [todayDate] = useState(() => {
     const d = new Date();
@@ -776,6 +779,32 @@ export default function App() {
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
 
+  // ── 네이티브 뒤로가기 버튼 처리 (graniteEvent) ──
+  useEffect(() => {
+    const cleanup = graniteEvent.addEventListener('backEvent', {
+      onEvent: () => {
+        // 법적 문서 모달이 열려 있으면 닫기
+        if (legalDocRef.current) {
+          setLegalDoc(null);
+          return;
+        }
+        // AI 분석 결과 오버레이가 열려 있으면 닫기
+        if (aiResultRef.current) {
+          setAiResult(null);
+          return;
+        }
+        // 초기 화면(ONBOARD)이면 앱 종료
+        const histState = window.history.state;
+        if (!histState || histState.screen === S.ONBOARD) {
+          closeView().catch(() => {});
+        } else {
+          window.history.back();
+        }
+      },
+    });
+    return cleanup;
+  }, []);
+
   const handleTabChange = (id) => {
     window.history.pushState({ screen: S.RESULT, tab: id }, "");
     setTab(id);
@@ -825,12 +854,6 @@ export default function App() {
         }
       }
     };
-
-    // 개발 테스트 모드: 결제 없이 바로 분석
-    if (devMode) {
-      runAnalysis();
-      return;
-    }
 
     try {
       // 결제 시작 즉시 로딩 화면 표시 (공백 방지)
@@ -942,7 +965,6 @@ export default function App() {
   if (screen === S.INPUT) {
     return (
       <div style={wrap}>
-        <Header title="사주 정보 입력" onBack={() => navigate(registered ? S.RESULT : S.ONBOARD, "saju")} />
         <div style={{ padding: "28px 20px" }}>
           <Card>
             <div style={{ textAlign: "center", marginBottom: 24 }}>
@@ -1052,7 +1074,6 @@ export default function App() {
     if (tab === "premium") {
       return (
         <div style={wrap}>
-          <Header title="프리미엄 분석" onBack={() => handleTabChange("saju")} />
           <div style={{ padding: "20px" }}>
             <Card style={{ background: `linear-gradient(135deg, #1A1145, #2D1B69)`, marginBottom: 16, border: `1px solid ${C.gold}30` }}>
               <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
@@ -1084,7 +1105,7 @@ export default function App() {
               </div>
             ))}
           </div>
-          <div style={{ height: 80 }} />
+          <div style={{ height: 100 }} />
           <TabBar active={tab} onTab={handleTabChange} />
 
           {/* AI 분석 결과 전체화면 */}
@@ -1096,7 +1117,7 @@ export default function App() {
               `}</style>
 
               {/* 헤더 */}
-              <div style={{ display: "flex", alignItems: "center", padding: "52px 20px 16px", borderBottom: `1px solid ${C.lightGray}`, flexShrink: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", padding: "16px 20px", borderBottom: `1px solid ${C.lightGray}`, flexShrink: 0 }}>
                 <span style={{ fontSize: 28, marginRight: 12 }}>{aiResult.item.icon}</span>
                 <div style={{ fontSize: 17, fontWeight: 800, flex: 1 }}>{aiResult.item.title}</div>
                 {!aiResult.loading && (
@@ -1155,7 +1176,6 @@ export default function App() {
     if (tab === "my") {
       return (
         <div style={wrap}>
-          <Header title="내정보" onBack={() => handleTabChange("saju")} />
           <div style={{ padding: "24px 20px" }}>
             <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 12 }}>나의 사주</div>
             <Card style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>
@@ -1196,7 +1216,7 @@ export default function App() {
               <span style={{ fontSize: 12, color: C.gray }}>버전 1.0.0</span>
             </div>
           </div>
-          <div style={{ height: 80 }} />
+          <div style={{ height: 100 }} />
           <TabBar active={tab} onTab={handleTabChange} />
           {legalDoc && <LegalModal docKey={legalDoc} onClose={() => setLegalDoc(null)} />}
         </div>
@@ -1227,7 +1247,6 @@ export default function App() {
       };
       return (
         <div style={wrap}>
-          <Header title={card.title} onBack={() => setDetailId(null)} />
           <div style={{ padding: "24px 20px" }}>
             <Card style={{ textAlign: "center", marginBottom: 16 }}>
               <span style={{ fontSize: 52 }}>{card.emoji}</span>
@@ -1274,7 +1293,7 @@ export default function App() {
               ))}
             </Card>
           </div>
-          <div style={{ height: 80 }} />
+          <div style={{ height: 100 }} />
           <TabBar active={tab} onTab={handleTabChange} />
         </div>
       );
@@ -1288,21 +1307,6 @@ export default function App() {
             {toast}
           </div>
         )}
-        <Header title="운명테라피 사주" onBack={() => navigate(S.ONBOARD, "saju")} devMode={devMode} onTitleTap={() => {
-          const ref = devTapRef.current;
-          ref.count += 1;
-          clearTimeout(ref.timer);
-          if (ref.count >= 5) {
-            ref.count = 0;
-            setDevMode(prev => {
-              const next = !prev;
-              showToast(next ? "🛠️ DEV 모드 ON — 결제 없이 분석" : "DEV 모드 OFF");
-              return next;
-            });
-          } else {
-            ref.timer = setTimeout(() => { ref.count = 0; }, 2000);
-          }
-        }} />
         <div style={{ background: "linear-gradient(180deg, #1A0F3C 0%, #3B1F7E 35%, #8B5CF6 70%, #C084FC 100%)", padding: "20px 20px 36px", position: "relative", overflow: "hidden" }}>
           <Particles />
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 20, position: "relative", zIndex: 1 }}>
@@ -1488,7 +1492,7 @@ export default function App() {
               onClick={async () => {
                 try {
                   const link = await getTossShareLink('intoss://my-sajuapp');
-                  await share({ message: `운명테라피 사주 - 나의 사주를 확인해보세요!\n${link}` });
+                  await share({ message: `사주 스포일러 - 나의 사주를 확인해보세요!\n${link}` });
                 } catch {}
               }}>
               🔗 친구에게 공유하기
@@ -1509,7 +1513,7 @@ export default function App() {
         </div>
         {legalDoc && <LegalModal docKey={legalDoc} onClose={() => setLegalDoc(null)} />}
 
-        <div style={{ height: 70 }} />
+        <div style={{ height: 100 }} />
         <TabBar active={tab} onTab={handleTabChange} />
       </div>
     );

@@ -3,9 +3,9 @@ import { defineConfig } from '@apps-in-toss/web-framework/config';
 export default defineConfig({
   appName: 'my-sajuapp',
   brand: {
-    displayName: '운명테라피 사주',
+    displayName: '사주 스포일러',
     primaryColor: '#7B61FF',
-    icon: '',
+    icon: 'https://toss-saju.vercel.app/logo.svg',
   },
   web: {
     host: 'localhost',
