@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { Button, ProgressBar, TextField } from "@toss/tds-mobile";
 import { IAP, share, getTossShareLink, graniteEvent, closeView } from "@apps-in-toss/web-framework";
 import KoreanLunarCalendar from "korean-lunar-calendar";
+import { getJeolgiDay } from "./jeolgi";
+import { getCategoryPrompt } from "./premium-prompts";
 
 const C = {
   blue: "#3182F6", dark: "#191F28", gray: "#8B95A1", lightGray: "#F2F4F6",
@@ -47,8 +49,6 @@ const getJDN = (year, month, day) => {
     Math.floor(y / 4) - Math.floor(y / 100) + Math.floor(y / 400) - 32045;
 };
 const pillarStr = (s, b) => `${GAN[s]}${GAN_HAN[s]}/${JI[b]}${JI_HAN[b]}`;
-// 절기 기준일(근사): 소한·입춘·경칩·청명·입하·망종·소서·입추·백로·한로·입동·대설
-const JEOLGI = [6, 4, 6, 5, 6, 6, 7, 7, 8, 8, 7, 7];
 const MB_MAP = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0]; // 월별 월지 인덱스
 
 const calcYearPillar = (lunarY) => {
@@ -56,9 +56,11 @@ const calcYearPillar = (lunarY) => {
   const b = ((lunarY - 4) % 12 + 12) % 12;
   return { s, b, str: pillarStr(s, b) };
 };
-const calcMonthPillar = (lunarY, sm, sd) => {
+const calcMonthPillar = (lunarY, sm, sd, solarYear) => {
   const ys = ((lunarY - 4) % 10 + 10) % 10;
-  const b = sd < JEOLGI[sm - 1] ? MB_MAP[(sm - 2 + 12) % 12] : MB_MAP[sm - 1];
+  // 절기 정밀 계산 (천문학 기반 Shouxi 알고리즘)
+  const jeolgiDay = getJeolgiDay(solarYear, sm - 1);
+  const b = sd < jeolgiDay ? MB_MAP[(sm - 2 + 12) % 12] : MB_MAP[sm - 1];
   const s = ([2, 4, 6, 8, 0][ys % 5] + (b - 2 + 12) % 12) % 10;
   return { s, b, str: pillarStr(s, b) };
 };
@@ -74,7 +76,7 @@ const calcHourPillar = (ds, hourBranch) => {
 };
 const calcManseok = (year, month, day, hourStr, lunarY) => {
   const yp = calcYearPillar(lunarY);
-  const mp = calcMonthPillar(lunarY, month, day);
+  const mp = calcMonthPillar(lunarY, month, day, year);
   const dp = calcDayPillar(year, month, day);
   const hBranch = hourStr ? hourStr.replace("시", "") : "";
   const hp = calcHourPillar(dp.s, hBranch);
@@ -138,6 +140,10 @@ const callClaude = async (birthInfo, itemTitle, onChunk, itemDesc = "") => {
     return `${y}년 ${GAN[yStemIdx]}${JI[yBranchIdx]}년 — 천간 ${GAN[yStemIdx]}(${GAN_ELEM[yStemIdx]})은 ${getSipsin(yStemIdx)}, 지지 ${JI[yBranchIdx]}(${JI_ELEM[yBranchIdx]})`;
   }).join("\n");
 
+  // ── 카테고리별 전문 프롬프트 로드 ──
+  const categoryPrompt = getCategoryPrompt(itemTitle);
+  const minChars = categoryPrompt.systemExtra ? "400" : "400"; // 애정운은 promptExtra에서 600자 지정
+
   const systemPrompt = `당신은 40년 경력의 사주명리학 대가입니다. 적천수, 자평진전, 궁통보감에 정통하며, 의뢰인의 실제 사주 글자와 오행 수치를 반드시 인용하여 구체적으로 분석합니다.
 추상적이거나 누구에게나 해당되는 말은 절대 하지 않습니다. 한국어 존댓말을 사용하고, 따뜻하지만 권위 있는 전문가 어조로 작성합니다.
 반드시 4개 섹션 구분자(##...##)를 모두 사용하고, 각 섹션을 400자 이상 충실히 작성하세요. 절대 중간에 끊거나 요약하지 마세요.
@@ -159,6 +165,8 @@ ${pillarSipsin}
 [향후 3년 간지와 십신 — 아래 내용을 그대로 인용하세요]
 ${futureYearSipsin}
 
+${categoryPrompt.systemExtra}
+
 [절대 금지]
 - 자기 수정 표현 금지: "정정:", "수정:", "다시 말해" 등 AI가 스스로 틀렸다고 고치는 문구를 절대 포함하지 마세요.
 - 괄호 안 메타 설명 금지: "(목생화 아니라...)" 같은 내부 사고 과정을 노출하지 마세요.
@@ -177,10 +185,12 @@ ${futureYearSipsin}
 "${itemTitle}" — ${itemDesc}
 
 [작성 규칙]
-아래 4개 구분자를 정확히 사용하세요. 각 섹션 400자 이상. 구분자 외 특수기호 금지.
+아래 4개 구분자를 정확히 사용하세요. 각 섹션 ${minChars}자 이상. 구분자 외 특수기호 금지.
 연도별 간지는 반드시 위 [만세력 정보]에 명시된 것만 사용하세요. 임의로 추측하지 마세요.
 십신(비겁·식상·재성·관성·인성) 판단 시 일간 ${ilgan}(${ilganElem})을 기준으로 정확히 산출하세요.
 대운(大運)은 [만세력 정보]에 제공되지 않았으므로 언급하지 마세요.
+
+${categoryPrompt.promptExtra}
 
 ##사주풀이##
 이 사주의 일간 ${ilgan}(${ilganElem})의 강약, 오행 균형(${elemStr}), 용신을 밝히되, "${itemTitle}" 주제와 직접 연결하여 해석하세요. 이 사주가 왜 이 주제에서 어떤 특성을 보이는지 사주 글자를 근거로 서술하세요.
@@ -298,27 +308,62 @@ const ojHaeng = {
 const hStems = ["경(庚)","신(辛)","임(壬)","계(癸)","갑(甲)","을(乙)","병(丙)","정(丁)","무(戊)","기(己)"];
 const eBranches = ["신(申)","유(酉)","술(戌)","해(亥)","자(子)","축(丑)","인(寅)","묘(卯)","진(辰)","사(巳)","오(午)","미(未)"];
 
-const genFortune = (y, m, d, lunarY) => {
+// 오행 관계: 0=동일(비겁), 1=내가생(식상), 2=내가극(재성), 3=나를극(관성), 4=나를생(인성)
+const OHAENG_REL_SCORE = { 0: 70, 1: 82, 2: 75, 3: 55, 4: 88 }; // 관계별 기본 운세 기조
+const OHAENG_REL_NAME = { 0: "비겁", 1: "식상", 2: "재성", 3: "관성", 4: "인성" };
+const OHAENG_SUMMARIES = {
+  0: "오늘은 자신과 같은 기운이 흐르는 날입니다. 자신감이 높아지고 주도적으로 움직이기 좋지만, 경쟁이나 충돌에 주의하세요. 동료와 힘을 합치면 더 좋은 결과를 얻을 수 있습니다.",
+  1: "오늘은 내 기운이 밖으로 표현되는 날입니다. 창의적 아이디어가 떠오르고 소통 능력이 빛나는 때입니다. 새로운 시도나 자기 표현에 적극적으로 나서보세요.",
+  2: "오늘은 재물과 실리에 관한 기운이 활발합니다. 금전적 기회가 보이거나 실질적 성과를 거둘 수 있습니다. 다만 지나친 욕심은 오히려 역효과가 날 수 있으니 적정선을 지키세요.",
+  3: "오늘은 외부 압력이나 긴장감이 느껴질 수 있는 날입니다. 직장에서 평가나 책임이 따를 수 있으니 꼼꼼하게 대처하세요. 무리하지 말고 신중하게 행동하면 무난하게 넘길 수 있습니다.",
+  4: "오늘은 배움과 보호의 기운이 들어오는 날입니다. 좋은 조언이나 도움을 받기 쉽고, 학습·독서에도 좋은 날입니다. 마음을 열고 주변의 지혜를 받아들이세요.",
+};
+const OHAENG_DIR = ["동쪽", "남쪽", "중앙", "서쪽", "북쪽"]; // 목화토금수 방위
+const OHAENG_COLOR = ["초록색 계열", "빨간색 계열", "노란색 계열", "흰색·은색 계열", "파란색·검정색 계열"];
+
+const genFortune = (y, m, d, lunarY, ms) => {
   const ly = lunarY ?? y;
-  const s = (y * 31 + m * 17 + d * 13) % 100;
+  const now = new Date();
+  const todayJDN = getJDN(now.getFullYear(), now.getMonth() + 1, now.getDate());
+  const todayD60 = ((todayJDN - 2445733) % 60 + 60) % 60;
+  const todayStemIdx = todayD60 % 10;
+  const todayBranchIdx = todayD60 % 12;
+
+  // 내 일간 (만세력 있으면 정확한 값, 없으면 연주 기반 근사)
+  const myGanIdx = ms ? ms.dp.s : ((ly - 4) % 10 + 10) % 10;
+  const myElemIdx = Math.floor(myGanIdx / 2); // 0=목,1=화,2=토,3=금,4=수
+  const todayElemIdx = Math.floor(todayStemIdx / 2);
+
+  // 오행 관계 산출
+  const rel = ((todayElemIdx - myElemIdx) % 5 + 5) % 5;
+  const baseScore = OHAENG_REL_SCORE[rel];
+  // 일간 해시로 개인별 편차 (같은 일간이라도 사주마다 미세 차이)
+  const personalHash = ms
+    ? (ms.yp.s * 7 + ms.mp.s * 13 + ms.dp.b * 11 + ms.hp.s * 3 + now.getDate() * 5) % 20
+    : (ly * 31 + now.getDate() * 13) % 20;
+  const vary = (base, range) => Math.min(95, Math.max(30, base + (personalHash % range) - Math.floor(range / 2)));
+
+  // 용신 방위·색상 (일간 오행 기준)
+  const yongshinIdx = (myElemIdx + 4) % 5; // 인성 오행 = 나를 생하는 오행
+
   return {
-    total: 60 + (s % 35), wealth: 55 + ((s * 3) % 40), love: 50 + ((s * 7) % 45),
-    health: 60 + ((s * 11) % 35), work: 58 + ((s * 13) % 37), luck: 30 + ((s * 17) % 60),
-    todayStem: hStems[d % 10], todayBranch: eBranches[d % 12],
-    myStem: hStems[ly % 10], myBranch: eBranches[ly % 12],
-    summary: s > 50
-      ? "오늘은 기운이 상승하는 날입니다. 적극적으로 움직이면 좋은 결과가 따릅니다. 특히 오후 시간대에 재물과 관련된 좋은 소식이 있을 수 있어요."
-      : "차분하게 내면을 돌아보기 좋은 날입니다. 무리한 투자나 결정은 내일로 미루는 것이 현명합니다. 가까운 사람과의 대화에서 힌트를 얻을 수 있어요.",
-    luckyNums: Array.from({ length: 7 }, (_, i) => ((s * (i + 3) * 7 + i * 13) % 45) + 1)
+    total: vary(baseScore, 16), wealth: vary(rel === 2 ? 85 : baseScore - 3, 18),
+    love: vary(rel === 1 ? 84 : baseScore - 2, 20), health: vary(rel === 3 ? 60 : baseScore + 2, 14),
+    work: vary(rel === 3 ? 72 : baseScore, 16), luck: vary(baseScore - 10, 24),
+    todayStem: hStems[todayStemIdx], todayBranch: eBranches[todayBranchIdx],
+    myStem: hStems[myGanIdx], myBranch: eBranches[ms ? ms.dp.b : ((ly - 4) % 12 + 12) % 12],
+    summary: OHAENG_SUMMARIES[rel],
+    luckyNums: Array.from({ length: 10 }, (_, i) => ((myGanIdx * 7 + todayStemIdx * 11 + now.getDate() * 3 + i * 13) % 45) + 1)
       .filter((v, i, a) => a.indexOf(v) === i).slice(0, 7),
-    luckyTime: s > 50 ? "오후 3시~5시" : "오전 10시~12시",
-    luckyColor: s > 50 ? "파란색 계열" : "초록색 계열",
-    luckyDir: s > 50 ? "남동쪽" : "북서쪽",
+    luckyTime: todayElemIdx < 2 ? "오전 9시~11시" : todayElemIdx < 4 ? "오후 2시~4시" : "저녁 7시~9시",
+    luckyColor: OHAENG_COLOR[yongshinIdx],
+    luckyDir: OHAENG_DIR[yongshinIdx],
+    _rel: rel, _relName: OHAENG_REL_NAME[rel],
   };
 };
 
 const premiumItems = [
-  { icon: "🔥", title: "2026 신년 사주", origPrice: "21,900원", price: "4,400원", discount: "80%", desc: "올해의 대운과 세운을 총망라한 신년 특별 분석", featured: true, sku: "ait.0000020917.a3f15fe4.3e253fd54b.2627470992" },
+  { icon: "💕", title: "내 애정운·연애운 완전 분석", origPrice: "21,900원", price: "4,400원", discount: "80%", desc: "도화살·배우자궁·합충으로 보는 연애 스타일, 이상형, 인연 시기 프리미엄 확장 분석", featured: true, sku: "ait.0000020917.a3f15fe4.3e253fd54b.2627470992" },
   { icon: "💰", title: "내 말년 운세, 돈 걱정 없이 편안할까?", price: "2,750원", desc: "노후 재물운과 재테크 방향 분석", sku: "ait.0000020917.0f6f4430.e94987cfaf.2627621920" },
   { icon: "💪", title: "갱년기와 중년 건강, 어디를 조심할까?", price: "2,750원", desc: "건강 취약 시기와 관리 포인트", sku: "ait.0000020917.b23508e7.82e340944c.2633191458" },
   { icon: "🍀", title: "나에게도 횡재수가 있을까? 로또/투자", price: "2,750원", desc: "금전 행운의 시기와 투자 적기", sku: "ait.0000020917.3bb5f86a.5c0e258496.2633244480" },
@@ -431,6 +476,80 @@ function Particles() {
         <div key={i} style={{ position: "absolute", bottom: 0, left: p.left, width: p.size, height: p.size, borderRadius: "50%", background: p.color, animation: `floatUp ${p.dur} ${p.delay} infinite` }} />
       ))}
     </>
+  );
+}
+
+// ====== 사주 원국표 (프리미엄 전용) ======
+const ELEM_COLORS = { "목": "#00C98D", "화": "#F04452", "토": "#FFC558", "금": "#E0E0E0", "수": "#3182F6" };
+const GAN_ELEM_MAP = ["목","목","화","화","토","토","금","금","수","수"];
+const JI_ELEM_MAP  = ["수","토","목","목","토","화","화","토","금","금","토","수"];
+
+function WonGukTable({ ms, gender, birthYear }) {
+  if (!ms) return null;
+  const pillars = [
+    { label: "시주", p: ms.hp },
+    { label: "일주", p: ms.dp },
+    { label: "월주", p: ms.mp },
+    { label: "연주", p: ms.yp },
+  ];
+  const animal = ["원숭이","닭","개","돼지","쥐","소","호랑이","토끼","용","뱀","말","양"][birthYear % 12];
+  const cell = (elem) => ({
+    padding: "5px 0", textAlign: "center", fontWeight: 700,
+    background: `${ELEM_COLORS[elem] || "#999"}18`, color: ELEM_COLORS[elem] || "#666",
+    borderRadius: 6, minWidth: 0,
+  });
+  return (
+    <div style={{ marginBottom: 14, borderRadius: 14, border: "1.5px solid #7B61FF25", overflow: "hidden", background: "#fff" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", background: "#7B61FF08" }}>
+        <span style={{ fontSize: 13, fontWeight: 800, color: "#7B61FF" }}>사주 원국</span>
+        <span style={{ fontSize: 11, color: "#8B95A1", marginLeft: "auto" }}>{gender} · {animal}띠</span>
+      </div>
+      <div style={{ padding: "8px 8px 10px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 4, fontSize: 10, color: "#8B95A1", fontWeight: 600, textAlign: "center", marginBottom: 3 }}>
+          {pillars.map((col, i) => <div key={i}>{col.label}</div>)}
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 4, marginBottom: 4 }}>
+          {pillars.map((col, i) => {
+            const elem = col.p.s >= 0 ? GAN_ELEM_MAP[col.p.s] : null;
+            return (
+              <div key={`g${i}`} style={cell(elem)}>
+                {col.p.s >= 0
+                  ? <><div style={{ fontSize: 16, lineHeight: 1 }}>{GAN[col.p.s]}</div><div style={{ fontSize: 9, opacity: 0.7 }}>{GAN_HAN[col.p.s]} {elem}</div></>
+                  : <div style={{ fontSize: 12, color: "#bbb" }}>—</div>}
+              </div>
+            );
+          })}
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 4 }}>
+          {pillars.map((col, i) => {
+            const elem = col.p.b >= 0 ? JI_ELEM_MAP[col.p.b] : null;
+            return (
+              <div key={`j${i}`} style={cell(elem)}>
+                {col.p.b >= 0
+                  ? <><div style={{ fontSize: 16, lineHeight: 1 }}>{JI[col.p.b]}</div><div style={{ fontSize: 9, opacity: 0.7 }}>{JI_HAN[col.p.b]} {elem}</div></>
+                  : <div style={{ fontSize: 12, color: "#bbb" }}>—</div>}
+              </div>
+            );
+          })}
+        </div>
+        <div style={{ display: "flex", gap: 3, marginTop: 6, paddingTop: 6, borderTop: "1px solid #f0f0f0" }}>
+          {(() => {
+            const ec = { 목:0, 화:0, 토:0, 금:0, 수:0 };
+            [ms.yp.s, ms.mp.s, ms.dp.s, ms.hp.s].forEach(s => { if (s >= 0) ec[GAN_ELEM_MAP[s]]++; });
+            [ms.yp.b, ms.mp.b, ms.dp.b, ms.hp.b].forEach(b => { if (b >= 0) ec[JI_ELEM_MAP[b]]++; });
+            const total = Object.values(ec).reduce((a, b) => a + b, 0) || 1;
+            return Object.entries(ec).map(([k, v]) => (
+              <div key={k} style={{ flex: 1, textAlign: "center" }}>
+                <div style={{ height: 4, borderRadius: 2, background: `${ELEM_COLORS[k]}30`, overflow: "hidden", marginBottom: 2 }}>
+                  <div style={{ height: "100%", width: `${(v / total) * 100}%`, background: ELEM_COLORS[k], borderRadius: 2, minWidth: v > 0 ? 3 : 0 }} />
+                </div>
+                <div style={{ fontSize: 9, color: ELEM_COLORS[k], fontWeight: 700 }}>{k}{v}</div>
+              </div>
+            ));
+          })()}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -709,16 +828,17 @@ export default function App() {
     return `${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')} (${['일','월','화','수','목','금','토'][d.getDay()]})`;
   });
 
-  // AI 오늘의 운세 데이터 가져오기 (일간 기반 CDN 캐싱)
+  // AI 오늘의 운세 데이터 가져오기 (4주 전체 정보 전달)
   useEffect(() => {
-    if (!result) return;
-    const f = result.fortune;
-    // 일간 인덱스: hStems 배열에서 myStem 위치 (0~9)
-    const ilganIdx = hStems.indexOf(f.myStem);
-    if (ilganIdx < 0) return;
+    if (!result || !result.ms) return;
+    const ms = result.ms;
+    const ilganIdx = ms.dp.s;
     const now = new Date();
     const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    fetch(`/api/daily-fortune?date=${dateStr}&ilgan=${ilganIdx}`)
+    // 4주 정보를 쿼리로 전달 (연주천간,월주천간,일주천간,시주천간 | 연주지지,월주지지,일주지지,시주지지)
+    const stems = [ms.yp.s, ms.mp.s, ms.dp.s, ms.hp.s >= 0 ? ms.hp.s : -1].join(",");
+    const branches = [ms.yp.b, ms.mp.b, ms.dp.b, ms.hp.b >= 0 ? ms.hp.b : -1].join(",");
+    fetch(`/api/daily-fortune?date=${dateStr}&ilgan=${ilganIdx}&stems=${stems}&branches=${branches}&gender=${gender}`)
       .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
       .then(data => setAiFortune(data))
       .catch(e => console.warn('AI fortune fallback:', e));
@@ -742,7 +862,8 @@ export default function App() {
             } catch {}
           }
           const lunarY = getLunarYear(y, m, d);
-          setResult({ year: y, month: m, day: d, inputDate, calType, element: getElement(lunarY), animal: getAnimal(lunarY), fortune: genFortune(y, m, d, lunarY) });
+          const ms = calcManseok(y, m, d, hour, lunarY);
+          setResult({ year: y, month: m, day: d, inputDate, calType, element: getElement(lunarY), animal: getAnimal(lunarY), fortune: genFortune(y, m, d, lunarY, ms), ms, lunarY });
           setTimeout(() => navigate(S.RESULT, "saju"), 400);
           return 100;
         }
@@ -834,7 +955,7 @@ export default function App() {
       const y = result.year, m = result.month, d = result.day;
       const lunarY = getLunarYear(y, m, d);
       const ms = calcManseok(y, m, d, hour, lunarY);
-      setAiResult({ item, text: "", loading: true, error: null });
+      setAiResult({ item, text: "", loading: true, error: null, ms, gender, birthYear: y });
       let finalText = "";
       try {
         await callClaude(
@@ -1148,7 +1269,10 @@ export default function App() {
                   </div>
                 )}
                 {aiResult.text && !aiResult.loading && (
-                  <AnalysisSections text={aiResult.text} loading={false} />
+                  <>
+                    <WonGukTable ms={aiResult.ms} gender={aiResult.gender} birthYear={aiResult.birthYear} />
+                    <AnalysisSections text={aiResult.text} loading={false} />
+                  </>
                 )}
               </div>
 
