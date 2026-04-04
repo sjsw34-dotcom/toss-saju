@@ -5,7 +5,7 @@
     { "source": "/((?!api/)(?!.*\\.html$).*)", "destination": "/index.html" }
   ],
   "functions": {
-    "api/claude.js": { "maxDuration": 60 },
+    "api/claude.js": { "maxDuration": 120 },
     "api/daily-fortune.js": { "maxDuration": 30 },
     "api/validate-saju.js": { "maxDuration": 15 }
   }

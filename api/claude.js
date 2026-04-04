@@ -24,7 +24,7 @@ export default async function handler(req, res) {
 
     const body = {
       model: "claude-sonnet-4-6",
-      max_tokens: 8192,
+      max_tokens: 16384,
       stream: true,
       messages: [{ role: "user", content: prompt }],
     };
