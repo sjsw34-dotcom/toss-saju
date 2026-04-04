@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Button, ProgressBar, TextField } from "@toss/tds-mobile";
-import { IAP, share, getTossShareLink, graniteEvent, closeView } from "@apps-in-toss/web-framework";
+import { IAP, share, getTossShareLink, graniteEvent, closeView, TossAds, loadFullScreenAd, showFullScreenAd } from "@apps-in-toss/web-framework";
 import KoreanLunarCalendar from "korean-lunar-calendar";
 import { getJeolgiDay } from "./jeolgi";
 import { getCategoryPrompt } from "./premium-prompts";
@@ -743,37 +743,6 @@ function TabBar({ active, onTab }) {
   );
 }
 
-function AdOverlay({ onComplete }) {
-  const [sec, setSec] = useState(5);
-  useEffect(() => {
-    if (sec <= 0) { onComplete(); return; }
-    const t = setTimeout(() => setSec(sec - 1), 1000);
-    return () => clearTimeout(t);
-  }, [sec]);
-  return (
-    <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.92)", zIndex: 200, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ width: "90%", maxWidth: 400, background: "#1a1a2e", borderRadius: 20, padding: "32px 24px", textAlign: "center", border: "1px solid rgba(255,255,255,0.1)" }}>
-        <div style={{ fontSize: 12, color: C.gray, marginBottom: 16 }}>광고</div>
-        <div style={{ width: "100%", height: 200, borderRadius: 12, background: "linear-gradient(135deg, #667eea, #764ba2)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
-          <div style={{ color: "#fff", textAlign: "center" }}>
-            <div style={{ fontSize: 36, marginBottom: 8 }}>📺</div>
-            <div style={{ fontSize: 14, opacity: 0.8 }}>AdMob 보상형 광고</div>
-          </div>
-        </div>
-        <div style={{ width: 48, height: 48, borderRadius: 24, border: `3px solid ${sec > 0 ? C.gray : C.purple}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px", background: sec <= 0 ? C.purple : "transparent", transition: "all 0.3s" }}>
-          {sec > 0 ? <span style={{ fontSize: 18, fontWeight: 800, color: C.gray }}>{sec}</span> : <span style={{ fontSize: 18, color: "#fff" }}>✓</span>}
-        </div>
-        <div style={{ fontSize: 13, color: C.gray, marginBottom: 20 }}>{sec > 0 ? `${sec}초 후 결과를 확인할 수 있어요` : "광고가 끝났어요!"}</div>
-        {sec <= 0 && (
-          <GradientBtn onClick={onComplete} gradient={`linear-gradient(135deg, ${C.purple}, ${C.pink})`}>
-            ✨ 결과 확인하기
-          </GradientBtn>
-        )}
-      </div>
-    </div>
-  );
-}
-
 // TDS TextField 기반 숫자 입력 (상단 레이블 포함)
 function Inp({ label, value, onChange, placeholder, maxLen }) {
   return (
@@ -797,7 +766,13 @@ function Inp({ label, value, onChange, placeholder, maxLen }) {
 }
 
 // ====== SCREENS ======
-const S = { ONBOARD: "onboard", INPUT: "input", LOADING: "loading", AD: "ad", RESULT: "result" };
+const S = { ONBOARD: "onboard", INPUT: "input", LOADING: "loading", RESULT: "result" };
+
+// ====== 광고 ID (테스트용 — 프로덕션 시 실제 adGroupId로 교체) ======
+const AD_IDS = {
+  interstitial: "ait-ad-test-interstitial-id",
+  banner: "ait-ad-test-banner-id",
+};
 
 export default function App() {
   const [screen, setScreen] = useState(S.ONBOARD);
@@ -818,8 +793,12 @@ export default function App() {
   const [legalDoc, setLegalDoc] = useState(null); // 'terms' | 'privacy' | null
   const [toast, setToast] = useState(null); // 토스트 메시지
   const [aiFortune, setAiFortune] = useState(null); // AI 오늘의 운세 캐시 데이터
+  const [adsReady, setAdsReady] = useState(false);           // TossAds 배너 SDK 초기화 완료
+  const [adLoaded, setAdLoaded] = useState(false);            // 전면광고 로드 완료
+  const [analysisReady, setAnalysisReady] = useState(false);  // 사주 계산 완료 (전면광고 트리거)
   const legalDocRef = useRef(legalDoc);
   const aiResultRef = useRef(null);
+  const bannerRef = useRef(null);
   useEffect(() => { legalDocRef.current = legalDoc; }, [legalDoc]);
   useEffect(() => { aiResultRef.current = aiResult; }, [aiResult]);
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2500); };
@@ -827,6 +806,17 @@ export default function App() {
     const d = new Date();
     return `${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')} (${['일','월','화','수','목','금','토'][d.getDay()]})`;
   });
+
+  // ── 토스 광고 SDK 초기화 (1회) ──
+  useEffect(() => {
+    if (!TossAds?.initialize?.isSupported?.()) return;
+    TossAds.initialize({
+      callbacks: {
+        onInitialized: () => setAdsReady(true),
+        onInitializationFailed: () => {},
+      },
+    });
+  }, []);
 
   // AI 오늘의 운세 데이터 가져오기 (4주 전체 정보 전달)
   useEffect(() => {
@@ -847,6 +837,19 @@ export default function App() {
   useEffect(() => {
     if (screen !== S.LOADING) return;
     setLoadPct(0);
+    setAdLoaded(false);
+    setAnalysisReady(false);
+
+    // 전면광고 미리 로드 (프로그레스바와 병렬, 사용자 대기시간 추가 없음)
+    let adCleanup = () => {};
+    if (loadFullScreenAd?.isSupported?.()) {
+      adCleanup = loadFullScreenAd({
+        options: { adGroupId: AD_IDS.interstitial },
+        onEvent: (e) => { if (e.type === "loaded") setAdLoaded(true); },
+        onError: () => {},
+      });
+    }
+
     const t = setInterval(() => {
       setLoadPct((p) => {
         if (p >= 100) {
@@ -864,14 +867,48 @@ export default function App() {
           const lunarY = getLunarYear(y, m, d);
           const ms = calcManseok(y, m, d, hour, lunarY);
           setResult({ year: y, month: m, day: d, inputDate, calType, element: getElement(lunarY), animal: getAnimal(lunarY), fortune: genFortune(y, m, d, lunarY, ms), ms, lunarY });
-          setTimeout(() => navigate(S.RESULT, "saju"), 400);
+          setAnalysisReady(true);
           return 100;
         }
         return p + Math.random() * 8 + 4;
       });
     }, 200);
-    return () => clearInterval(t);
+    return () => { clearInterval(t); adCleanup(); };
   }, [screen]);
+
+  // ── 전면광고: 분석 완료 시 표시 → dismissed 후 RESULT 전환 ──
+  useEffect(() => {
+    if (!analysisReady) return;
+    if (showFullScreenAd?.isSupported?.() && adLoaded) {
+      showFullScreenAd({
+        options: { adGroupId: AD_IDS.interstitial },
+        onEvent: (e) => {
+          if (e.type === "dismissed" || e.type === "failedToShow") {
+            setAnalysisReady(false);
+            navigate(S.RESULT, "saju");
+          }
+        },
+        onError: () => { setAnalysisReady(false); navigate(S.RESULT, "saju"); },
+      });
+    } else {
+      // 광고 미지원/로드 실패 → 기존처럼 바로 전환
+      setTimeout(() => { setAnalysisReady(false); navigate(S.RESULT, "saju"); }, 400);
+    }
+  }, [analysisReady, adLoaded]);
+
+  // ── 배너광고: RESULT 사주탭에 배치 ──
+  useEffect(() => {
+    if (screen !== S.RESULT || tab !== "saju" || !adsReady || !bannerRef.current) return;
+    const attached = TossAds.attachBanner(AD_IDS.banner, bannerRef.current, {
+      theme: "light", tone: "blackAndWhite", variant: "expanded",
+      callbacks: {
+        onAdRendered: () => { if (bannerRef.current) bannerRef.current.style.display = "block"; },
+        onNoFill: () => { if (bannerRef.current) bannerRef.current.style.display = "none"; },
+        onAdFailedToRender: () => { if (bannerRef.current) bannerRef.current.style.display = "none"; },
+      },
+    });
+    return () => { attached?.destroy(); };
+  }, [screen, tab, adsReady]);
 
   // ── 히스토리 기반 네비게이션 (토스 네이티브 뒤로가기 지원) ──
   const navigate = (newScreen, newTab = "saju", extra = {}) => {
@@ -1488,6 +1525,9 @@ export default function App() {
             <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 10 }}>✨ 오늘의 총운</div>
             <p style={{ fontSize: 14, color: "#4E5968", lineHeight: 1.8, margin: 0 }}>{f.summary}</p>
           </Card>
+
+          {/* 배너 광고 (토스 SDK — 재고 없으면 자동 숨김) */}
+          <div ref={bannerRef} style={{ width: "100%", height: 96, marginBottom: 16 }} />
 
           <div style={{ marginBottom: 4 }}>
             <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 4 }}>시간대별 오늘 운세</div>
