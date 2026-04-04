@@ -973,7 +973,7 @@ export default function App() {
   const handlePremiumClick = (item) => {
     if (!result) return;
 
-    const storageKey = `saju_${item.sku}_${result.year}_${result.month}_${result.day}_${gender}`;
+    const storageKey = `saju_v2_${item.sku}_${result.year}_${result.month}_${result.day}_${gender}`;
 
     // 세션 캐시 확인
     if (purchasedResults[storageKey]) {
