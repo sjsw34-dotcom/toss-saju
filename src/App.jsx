@@ -799,6 +799,8 @@ export default function App() {
   const legalDocRef = useRef(legalDoc);
   const aiResultRef = useRef(null);
   const bannerRef = useRef(null);
+  const bannerRef2 = useRef(null);
+  const bannerRef3 = useRef(null);
   useEffect(() => { legalDocRef.current = legalDoc; }, [legalDoc]);
   useEffect(() => { aiResultRef.current = aiResult; }, [aiResult]);
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2500); };
@@ -896,18 +898,23 @@ export default function App() {
     }
   }, [analysisReady, adLoaded]);
 
-  // ── 배너광고: RESULT 사주탭에 배치 ──
+  // ── 배너광고: RESULT 사주탭 3개소 배치 ──
   useEffect(() => {
-    if (screen !== S.RESULT || tab !== "saju" || !adsReady || !bannerRef.current) return;
-    const attached = TossAds.attachBanner(AD_IDS.banner, bannerRef.current, {
-      theme: "light", tone: "blackAndWhite", variant: "expanded",
-      callbacks: {
-        onAdRendered: () => { if (bannerRef.current) bannerRef.current.style.display = "block"; },
-        onNoFill: () => { if (bannerRef.current) bannerRef.current.style.display = "none"; },
-        onAdFailedToRender: () => { if (bannerRef.current) bannerRef.current.style.display = "none"; },
-      },
+    if (screen !== S.RESULT || tab !== "saju" || !adsReady) return;
+    const refs = [bannerRef, bannerRef2, bannerRef3];
+    const cleanups = refs.map(ref => {
+      if (!ref.current) return null;
+      const el = ref.current;
+      return TossAds.attachBanner(AD_IDS.banner, el, {
+        theme: "light", tone: "blackAndWhite", variant: "expanded",
+        callbacks: {
+          onAdRendered: () => { el.style.display = "block"; },
+          onNoFill: () => { el.style.display = "none"; },
+          onAdFailedToRender: () => { el.style.display = "none"; },
+        },
+      });
     });
-    return () => { attached?.destroy(); };
+    return () => { cleanups.forEach(c => c?.destroy()); };
   }, [screen, tab, adsReady]);
 
   // ── 히스토리 기반 네비게이션 (토스 네이티브 뒤로가기 지원) ──
@@ -1595,6 +1602,9 @@ export default function App() {
             );
           })()}
 
+          {/* 배너 광고 2 */}
+          <div ref={bannerRef2} style={{ width: "100%", height: 96, marginBottom: 16 }} />
+
           <div style={{ marginTop: 8, marginBottom: 4 }}>
             <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 4 }}>분야별 오늘 운세</div>
             <div style={{ fontSize: 13, color: C.gray, marginBottom: 16 }}>궁금한 분야를 탭해서 확인하세요.</div>
@@ -1634,6 +1644,9 @@ export default function App() {
               </Card>
             ))}
           </div>
+
+          {/* 배너 광고 3 */}
+          <div ref={bannerRef3} style={{ width: "100%", height: 96, marginBottom: 16 }} />
 
           <Card style={{ background: "linear-gradient(135deg, #1A0F3C, #2D1B69)", marginBottom: 20, border: `1px solid ${C.gold}25`, textAlign: "center" }}>
             <div style={{ fontSize: 28, marginBottom: 8 }}>💎</div>
